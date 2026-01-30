@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MigrationExample Plugin</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .info-box { background-color: #f0f8ff; border: 1px solid #4a90e2; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; }
+        .code { font-family: monospace; background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the MigrationExample Plugin</h1>
+
+    <div class="info-box">
+        <h2>Hello, <%= $name %>!</h2>
+        <p>This template is provided by the <span class="code">Mojolicious::Plugin::Fondation::MigrationExample</span> plugin.</p>
+
+        <h3>What's happening:</h3>
+        <ul>
+            <li>This plugin inherits from <span class="code">Mojolicious::Plugin::Fondation</span></li>
+            <li>When Fondation loads this plugin, it automatically:
+                <ul>
+                    <li>Adds this template directory to the application's template search path</li>
+                    <li>Copies migration files from <span class="code">share/migrations/</span> to the application's <span class="code">share/migrations/</span> directory</li>
+                </ul>
+            </li>
+            <li>The application can override this template by placing its own version in <span class="code">templates/migration_example/welcome.html.ep</span></li>
+        </ul>
+    </div>
+
+    <h3>Migration Files Provided:</h3>
+    <ul>
+        <li><span class="code">001_create_example.sql</span> - Creates the example_data table</li>
+        <li><span class="code">002_add_description.sql</span> - Adds description column</li>
+    </ul>
+
+    <p>These migrations are now available in your application's <span class="code">share/migrations/</span> directory and can be applied using a database migration tool.</p>
+
+    <p><a href="/migration-example">Back to the main plugin page</a></p>
+</body>
+</html>

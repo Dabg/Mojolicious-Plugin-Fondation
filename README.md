@@ -136,16 +136,18 @@ See the `t/` directory for comprehensive examples:
 - `t/02-config-priority.t` - Configuration priority tests
 - `t/03-template-resolution.t` - Template resolution tests
 - `t/04-app-config.t` - Application configuration tests
+- `t/05-migrations.t` - Database migration copying tests
 
 ### Example Application
 
 A complete example application is available in `t/myapp.pl`. This application demonstrates:
 
 1. Loading configuration from a file (`myapp.conf`)
-2. Using Fondation with the `Fondation::Blog` and `Fondation::TemplateTest` plugins
+2. Using Fondation with multiple plugins (`Fondation::Blog`, `Fondation::TemplateTest`, `Fondation::TemplateSubdirTest`, `Fondation::MigrationExample`)
 3. Displaying the plugin dependency tree
 4. Configuration priority in action
 5. Template inheritance and override
+6. Database migration copying
 
 To run the example:
 
@@ -157,6 +159,10 @@ perl -Ilib -It/lib t/myapp.pl get /blog # Test blog page with config
 perl -Ilib -It/lib t/myapp.pl get /template-test # Test plugin template
 perl -Ilib -It/lib t/myapp.pl get /template-override # Test application template override
 perl -Ilib -It/lib t/myapp.pl get /template-info # Show template inheritance info
+perl -Ilib -It/lib t/myapp.pl get /template-subdir-info # Show subdirectory template inheritance
+perl -Ilib -It/lib t/myapp.pl get /migration-info # Show migration copying demonstration
+perl -Ilib -It/lib t/myapp.pl get /migration-example # Test MigrationExample plugin route
+perl -Ilib -It/lib t/myapp.pl get /migration-example-template # Test MigrationExample plugin template
 perl -Ilib -It/lib t/myapp.pl get /template_test # Direct route from TemplateTest plugin
 perl -Ilib -It/lib t/myapp.pl get /info # Show plugin information
 ```
@@ -164,6 +170,8 @@ perl -Ilib -It/lib t/myapp.pl get /info # Show plugin information
 The configuration file (`t/myapp.conf`) sets:
 - Blog title for `Fondation::Blog`
 - Message for `Fondation::TemplateTest`
+- Message for `Fondation::TemplateSubdirTest`
+- Name for `Fondation::MigrationExample`
 
 #### Template Inheritance Demonstration
 
@@ -173,6 +181,15 @@ The application includes a template override demonstration:
 - Application templates have priority over plugin templates
 
 Visit `/template-info` to see detailed explanation of template resolution order and priority.
+
+#### Migration Copying Demonstration
+
+The application includes a migration copying demonstration:
+- Plugin `Fondation::MigrationExample` provides migration files in `share/migrations/`
+- Fondation automatically copies them to the application's `share/migrations/` directory
+- Existing migration files are not overwritten
+
+Visit `/migration-info` to see which migration files were copied and their status.
 
 ## Template Support
 
@@ -229,6 +246,67 @@ $app->renderer->paths(['/path/to/app/templates']);
 # Create /path/to/app/templates/welcome.html.ep
 # This file will be used instead of the plugin's version
 ```
+
+## Database Migration Support
+
+Fondation automatically discovers and copies database migration files from plugins that follow the convention of placing migrations in a `share/migrations/` directory relative to the plugin's `.pm` file.
+
+### How It Works
+
+When a plugin is loaded through Fondation, it automatically scans for a `share/migrations/` directory in the plugin's distribution path. If found, Fondation copies all migration files (`.sql` files) to the application's `share/migrations/` directory. Existing migration files with the same name are **not overwritten**, allowing applications to customize migrations while still getting defaults from plugins.
+
+### Plugin Migration Structure
+
+Plugins can provide database migrations by organizing them as follows:
+
+```
+MyPlugin/
+├── lib/
+│   └── Mojolicious/
+│       └── Plugin/
+│           └── MyPlugin.pm
+└── share/
+    └── migrations/
+        ├── 001_create_users.sql
+        ├── 002_add_email_column.sql
+        └── 003_create_posts.sql
+```
+
+### Migration File Naming
+
+Migration files should be named with a numeric prefix to ensure proper ordering (e.g., `001_`, `002_`, etc.). Fondation copies files in the order they appear in the directory (alphabetically).
+
+### Usage in Applications
+
+Once migrations are copied to the application's `share/migrations/` directory, they can be applied using any database migration tool. For example, with `DBIx::Migrate::Simple`:
+
+```perl
+use DBIx::Migrate::Simple;
+
+my $migrator = DBIx::Migrate::Simple->new(
+    schema_class => 'MyApp::Schema',
+    schema_args  => ['dbi:SQLite:dbname=myapp.db'],
+);
+
+# Migrate to latest version (applies all migrations)
+$migrator->migrate;
+```
+
+### Example Application with Migrations
+
+The example application in `t/myapp.pl` demonstrates migration copying with the `Fondation::MigrationExample` plugin:
+
+```bash
+cd /path/to/Mojolicious-Plugin-Fondation
+perl -Ilib -It/lib t/myapp.pl get /migration-info  # Show migration status
+perl -Ilib -It/lib t/myapp.pl get /migration-example  # Test MigrationExample plugin
+```
+
+The application will automatically copy migration files from plugins to `t/share/migrations/`.
+
+### Error Handling
+
+If the application's home directory is not writable, Fondation logs a debug message and continues without error. This ensures that applications running in read-only environments (like some deployment scenarios) continue to function normally.
 
 ## Author
 

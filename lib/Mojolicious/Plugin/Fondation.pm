@@ -69,7 +69,12 @@ sub load_plugins {
         my $share_dir = $self->share_dir($app, $full_plugin_name, $child_short_name);
 
         # Automatically add its share/templates if exists
-        $self->_add_plugin_templates_path($app, $share_dir, $child_short_name);
+        if ($share_dir) {
+            $self->_add_plugin_templates_path($app, $share_dir, $child_short_name);
+
+            # Copy migrations from plugin if they exist
+            $self->_copy_plugin_migrations($app, $share_dir, $child_short_name);
+        }
     }
 }
 
@@ -113,6 +118,56 @@ sub _add_plugin_templates_path {
     push @$paths, $templates_dir;
 
     $app->log->debug("Fondation: Added share/templates from plugin '$child_short_name': $templates_dir");
+}
+
+sub _copy_plugin_migrations {
+    my ($self, $app, $share_dir, $child_short_name) = @_;
+
+    my $migrations_dir = File::Spec->catdir($share_dir, 'migrations');
+    return unless -d $migrations_dir;
+
+    # Check if application home is defined and accessible
+    my $app_home = $app->home;
+    return unless defined $app_home;
+
+    # Get application's share directory
+    my $app_share_dir = $app_home->child('share');
+
+    # Try to create migrations directory if it doesn't exist
+    my $app_migrations_dir = $app_share_dir->child('migrations');
+
+    eval {
+        $app_migrations_dir->make_path unless -d $app_migrations_dir;
+    };
+    if ($@) {
+        $app->log->debug("Fondation: Cannot create migrations directory at " . $app_migrations_dir . ": $@");
+        return;
+    }
+
+    # Log debug
+    $app->log->debug("Fondation: Found migrations in plugin '$child_short_name': $migrations_dir");
+
+    # Copy migration files that don't already exist
+    my $dir = Mojo::File->new($migrations_dir);
+    for my $file ($dir->list->each) {
+        next unless -f $file;
+
+        my $basename = $file->basename;
+        my $dest = $app_migrations_dir->child($basename);
+
+        if (-e $dest) {
+            $app->log->debug("Fondation: Migration '$basename' already exists in application, skipping");
+            next;
+        }
+
+        eval {
+            $file->copy_to($dest);
+            $app->log->debug("Fondation: Copied migration '$basename' from plugin '$child_short_name' to application");
+        };
+        if ($@) {
+            $app->log->debug("Fondation: Failed to copy migration '$basename': $@");
+        }
+    }
 }
 
 # Generate an ASCII representation of the plugin tree
@@ -252,12 +307,22 @@ triggers the search for application configuration.
 Returns an ASCII representation of the plugin dependency tree wrapped in
 C<E<lt>preE<gt>> tags. Useful for debugging and visualization.
 
-=head2 _normalize_name
+=head2 short_name
 
-  my $normalized = _normalize_name($name);
+  my $short = $self->short_name;
+  my $short = $self->short_name($full_name);
 
-Internal method that removes the C<Mojolicious::Plugin::> prefix from plugin
-names for consistency in the tree structure.
+Returns the short name of a plugin by removing the C<Mojolicious::Plugin::>
+prefix. When called without arguments, returns the short name of the current
+plugin. When called with a plugin name, returns the short version of that name.
+
+=head2 share_dir
+
+  my $share_dir = $self->share_dir($app, $full_plugin_name, $short_name);
+
+Internal method that returns the path to the plugin's C<share/> directory
+by examining where the plugin's module file is located. Returns C<undef> if
+the plugin file cannot be located.
 
 =head1 CREATING PLUGINS
 
@@ -286,6 +351,35 @@ C<Mojolicious::Plugin::Fondation>:
   }
 
   1;
+
+Plugins can also provide additional resources that are automatically handled by Fondation:
+
+=head2 Templates
+
+If your plugin has a C<share/templates/> directory, Fondation will automatically
+add it to the application's template search path. This allows plugins to provide
+default templates that can be overridden by the application.
+
+  # In your plugin directory structure:
+  #   MyPlugin/share/templates/myplugin/welcome.html.ep
+
+=head2 Database Migrations
+
+If your plugin has a C<share/migrations/> directory, Fondation will automatically
+copy the migration files to the application's C<share/migrations/> directory
+(when the application's home directory is writable). Existing migration files
+with the same name are not overwritten.
+
+  # In your plugin directory structure:
+  #   MyPlugin/share/migrations/001_create_table.sql
+  #   MyPlugin/share/migrations/002_add_column.sql
+
+This allows plugins to provide database schema migrations that applications
+can apply using tools like L<DBIx::Migrate::Simple>.
+
+Note: Migration copying only occurs if the application's home directory is
+writable. If the directory cannot be created, Fondation logs a debug message
+and continues without error.
 
 =head1 CONFIGURATION PRIORITY
 
