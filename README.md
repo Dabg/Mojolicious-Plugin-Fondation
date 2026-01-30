@@ -142,9 +142,10 @@ See the `t/` directory for comprehensive examples:
 A complete example application is available in `t/myapp.pl`. This application demonstrates:
 
 1. Loading configuration from a file (`myapp.conf`)
-2. Using Fondation with the `Fondation::Blog` test plugin
+2. Using Fondation with the `Fondation::Blog` and `Fondation::TemplateTest` plugins
 3. Displaying the plugin dependency tree
 4. Configuration priority in action
+5. Template inheritance and override
 
 To run the example:
 
@@ -153,10 +154,25 @@ cd /path/to/Mojolicious-Plugin-Fondation
 perl -Ilib -It/lib t/myapp.pl daemon   # Start development server
 perl -Ilib -It/lib t/myapp.pl get /    # Test home page
 perl -Ilib -It/lib t/myapp.pl get /blog # Test blog page with config
+perl -Ilib -It/lib t/myapp.pl get /template-test # Test plugin template
+perl -Ilib -It/lib t/myapp.pl get /template-override # Test application template override
+perl -Ilib -It/lib t/myapp.pl get /template-info # Show template inheritance info
+perl -Ilib -It/lib t/myapp.pl get /template_test # Direct route from TemplateTest plugin
 perl -Ilib -It/lib t/myapp.pl get /info # Show plugin information
 ```
 
-The configuration file (`t/myapp.conf`) sets the blog title, demonstrating how application configuration takes precedence over plugin defaults.
+The configuration file (`t/myapp.conf`) sets:
+- Blog title for `Fondation::Blog`
+- Message for `Fondation::TemplateTest`
+
+#### Template Inheritance Demonstration
+
+The application includes a template override demonstration:
+- Plugin `Fondation::TemplateTest` provides: `t/lib/Mojolicious/Plugin/Fondation/TemplateTest/share/templates/welcome.html.ep`
+- Application overrides with: `t/templates/welcome.html.ep`
+- Application templates have priority over plugin templates
+
+Visit `/template-info` to see detailed explanation of template resolution order and priority.
 
 ## Template Support
 

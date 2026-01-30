@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><title>Subdirectory Template - Application Override</title>
+<style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .app-template { background-color: #f0f8ff; border: 2px solid #4a90e2; padding: 20px; border-radius: 10px; }
+    .plugin-info { background-color: #fff0f0; border: 1px dashed #e24a4a; padding: 10px; margin-top: 20px; font-size: 0.9em; }
+    .priority { background-color: #ffffe0; border: 1px solid #e2e24a; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="app-template">
+    <h1>Welcome from APPLICATION Subdirectory Template (Override)</h1>
+    <p><strong>Message:</strong> <%= $message %></p>
+    <p><strong>Requested Source:</strong> <%= $template_source %></p>
+    <p><strong>Template Path:</strong> <%= $template_path %></p>
+    <p><strong>Actual Template:</strong> application (override in subdirectory)</p>
+    <p>This template is provided by the APPLICATION and overrides the plugin template in subdirectory Blog/test/</p>
+    <p>The application template directory has priority over plugin template directories, even in subdirectories.</p>
+</div>
+
+<div class="priority">
+    <h3>Template Priority Resolution (Subdirectory):</h3>
+    <ol>
+        <li><strong>Application templates directory</strong> (t/templates/Blog/test/) - checked FIRST</li>
+        <li><strong>Plugin template directories</strong> (added by Fondation) - checked if not found in application</li>
+    </ol>
+    <p>Since this template exists in the application subdirectory, it is used instead of the plugin version.</p>
+</div>
+
+<div class="plugin-info">
+    <h3>Original Plugin Template Information:</h3>
+    <p><strong>Plugin template path:</strong> t/lib/Mojolicious/Plugin/Fondation/TemplateSubdirTest/share/templates/Blog/test/other.html.ep</p>
+    <p><strong>Application template path:</strong> t/templates/Blog/test/other.html.ep</p>
+    <p><strong>Resolution Result:</strong> Application template used (higher priority in renderer paths)</p>
+</div>
+</body>
+</html>

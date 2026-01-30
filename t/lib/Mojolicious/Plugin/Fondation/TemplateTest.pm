@@ -15,7 +15,7 @@ sub register {
 
     $app->routes->get('/template_test')->to(cb => sub {
         my $c = shift;
-        $c->stash(message => $message);
+        $c->stash(message => $message, template_source => 'plugin');
         $c->render(template => 'welcome');
     });
 
