@@ -1,7 +1,9 @@
 package Mojolicious::Plugin::Fondation;
-use Mojo::Base 'Mojolicious::Plugin';
 
 # ABSTRACT: Hierarchical plugin loader with configuration priority
+
+use Mojo::Base 'Mojolicious::Plugin';
+use Mojo::File 'path';
 
 our $VERSION = '0.01';
 
@@ -12,73 +14,115 @@ our $TREE = {};
 sub register {
     my ($self, $app, $conf) = @_;
 
-    $TREE->{Fondation} ||= [];  # Initialize the root of the Fondation plugin (normalized name)
+    $TREE->{Fondation} ||= [];  # Initialize the root of the Fondation plugin (short name)
 
     # Load plugins declared in the configuration
     $self->load_plugins($app, $conf->{plugins});
 }
 
-# Normalize a plugin name: remove the Mojolicious::Plugin:: prefix
-sub _normalize_name {
-    my $name = shift;
+
+# Unique method to get the short name
+# - $self->short_name           → short name of current plugin
+# - $self->short_name($name)    → normalize any plugin name
+sub short_name {
+    my ($self, $name) = @_;
+    $name //= ref($self) || $self;           # if no arg, use current class/object
     $name =~ s/^Mojolicious::Plugin:://;
     return $name;
 }
 
+
+
+
 # Recursive function to load plugins
 sub load_plugins {
     my ($self, $app, $plugins) = @_;
-    my $parent = _normalize_name(ref $self);
+    my $parent = $self->short_name;
 
     for my $plugin (@$plugins) {
         my ($name, $args);
-        if (ref($plugin) eq 'HASH') {
-            # Hash with a single entry: key = plugin name, value = config (may be undef)
+        if (ref $plugin eq 'HASH') {
             ($name) = keys %$plugin;
-            $args = $plugin->{$name};
-            # If $args is undef, it means no direct configuration is provided
-            # (ex: { 'Fondation::Blog' })
+            $args   = $plugin->{$name};
         } else {
             $name = $plugin;
-            $args = undef;  # No direct configuration
+            $args = undef;
         }
 
-        # Normalize the name for searching in the application config
-        my $normalized_name = _normalize_name($name);
+        my $child_short_name = $self->short_name($name);
 
-        # Configuration priority:
-        # 1. Direct configuration ($args defined and is a hashref) -> highest priority
-        # 2. Otherwise, look in the application config under the key $normalized_name
-        # 3. Otherwise, no configuration (undef)
-        my $final_args = $args;
-        if (!defined $args || ref $args ne 'HASH') {
-            my $app_config = $app->config($normalized_name);
-            if (defined $app_config && ref $app_config eq 'HASH') {
-                $final_args = $app_config;
-            } else {
-                $final_args = {};
-            }
-        }
+        # Configuration priority
+        my $final_args = (defined $args && ref $args eq 'HASH')
+            ? $args
+            : ($app->config($child_short_name) // {});
 
         # Record the parent-child relationship
         $TREE->{$parent} ||= [];
-        push @{$TREE->{$parent}}, $normalized_name unless grep { $_ eq $normalized_name } @{$TREE->{$parent}};
-        # Initialize the child entry (even if it has no dependencies)
-        $TREE->{$normalized_name} ||= [];
+        push @{$TREE->{$parent}}, $child_short_name
+            unless grep { $_ eq $child_short_name } @{$TREE->{$parent}};
+        $TREE->{$child_short_name} ||= [];
 
-        $name = 'Mojolicious::Plugin::' . $name;
-        # Load the plugin and its arguments, which will itself load any other plugins.
-        $app->plugin($name => $final_args);
+        # Load plugin
+        my $full_plugin_name = 'Mojolicious::Plugin::' . $name;
+        my $p = $app->plugin($full_plugin_name => $final_args);
+
+        my $share_dir = $self->share_dir($app, $full_plugin_name, $child_short_name);
+
+
+        # Automatically add its share/templates if exists
+        $self->_add_plugin_templates_path($app, $share_dir, $child_short_name);
     }
+}
+
+
+
+sub share_dir {
+    my $self = shift;
+    my $app = shift;
+    my $full_plugin_name = shift;
+    my $child_short_name = shift;
+
+    (my $module_path = $full_plugin_name) =~ s!::!/!g;
+    $module_path .= '.pm';
+
+    my $plugin_file = $INC{$module_path};
+
+    return unless defined $plugin_file && -f $plugin_file;
+
+    my $plugin_lib_dir = File::Basename::dirname($plugin_file);
+
+    # Le short_name est 'Fondation::TemplateTest', mais le dossier est 'TemplateTest'
+    my $child_folder = $child_short_name;
+    $child_folder =~ s/^.*:://;
+
+    my $plugin_dir = File::Spec->catdir($plugin_lib_dir, $child_folder);
+    my $share_dir = File::Spec->catdir($plugin_dir, 'share');
+
+    return $share_dir;
+}
+
+
+sub _add_plugin_templates_path {
+    my ($self, $app, $share_dir, $child_short_name) = @_;
+
+    my $templates_dir = File::Spec->catdir($share_dir, 'templates');
+
+    return unless -d $templates_dir;
+
+    my $paths = $app->renderer->paths;
+    return if grep { $_ eq $templates_dir } @$paths;
+
+    push @$paths, $templates_dir;
+
+    $app->log->debug("Fondation: Added share/templates from plugin '$child_short_name': $templates_dir");
 }
 
 # Generate an ASCII representation of the plugin tree
 sub graph {
     my $root = 'Fondation';
-    my $tree = $TREE;
     my @lines = ($root);
-    push @lines, _render_tree($root, $tree, '');
-    return "<pre>". join("\n", @lines) .'</pre>';
+    push @lines, _render_tree($root, $TREE, '');
+    return "<pre>" . join("\n", @lines) . "</pre>";
 }
 
 sub _render_tree {
@@ -86,9 +130,8 @@ sub _render_tree {
     my @out;
     my $children = $tree->{$node} || [];
     my $last_idx = $#{$children};
-    for my $i (0..$last_idx) {
-        my $child = $children->[$i];
-        #my $short = $child;
+    for my $i (0 .. $last_idx) {
+        my $child     = $children->[$i];
         my $connector = ($i == $last_idx) ? '`- ' : '+- ';
         push @out, $prefix . $connector . $child;
         my $new_prefix = $prefix . ($i == $last_idx ? '   ' : '|  ');

@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<head><title>Welcome</title></head>
+<body>
+<h1>Welcome from Plugin Template</h1>
+<p>Message: <%= $message %></p>
+<p>This template is provided by the plugin.</p>
+</body>
+</html>
