@@ -4,12 +4,7 @@ A Mojolicious plugin that enables hierarchical plugin loading with configuration
 
 ## Description
 
-`Mojolicious::Plugin::Fondation` is a plugin system that allows plugins to load other plugins recursively, creating a hierarchical dependency tree. It provides advanced configuration management with three levels of priority:
-
-1. **Direct configuration** (highest priority) - Configuration passed directly when loading a plugin
-2. **Application configuration** (medium priority) - Configuration stored in the application config
-3. **Default configuration** (lowest priority) - Default values defined in the plugin itself
-
+`Mojolicious::Plugin::Fondation` is a plugin system that allows plugins to load other plugins recursively, creating a hierarchical dependency tree.
 ## Installation
 
 ```bash
@@ -43,40 +38,6 @@ plugin 'Fondation' => {
 app->start;
 ```
 
-### Configuration Priority Examples
-
-#### 1. Direct Configuration (Highest Priority)
-```perl
-plugin 'Fondation' => {
-    plugins => [
-        { 'MyPlugin' => { title => 'Custom Title' } }
-    ]
-};
-```
-
-#### 2. Application Configuration (Medium Priority)
-```perl
-# Set configuration in application config
-app->config('MyPlugin' => { title => 'App Title' });
-
-# Load plugin without direct config (string form)
-plugin 'Fondation' => {
-    plugins => [
-        'MyPlugin'  # Will use app config if available, otherwise plugin defaults
-    ]
-};
-```
-
-#### 3. Default Configuration (Lowest Priority)
-```perl
-# No configuration provided anywhere
-plugin 'Fondation' => {
-    plugins => [
-        'MyPlugin'  # Will use plugin defaults (no app config)
-    ]
-};
-```
-
 ### Creating Plugins
 
 Your plugins should inherit from `Mojolicious::Plugin::Fondation`:
@@ -107,20 +68,6 @@ sub register {
 1;
 ```
 
-### Plugin Tree Visualization
-
-You can visualize the plugin dependency tree:
-
-```perl
-get '/plugins' => sub {
-    my $c = shift;
-    my $graph = Mojolicious::Plugin::Fondation->graph();
-    $c->render(text => $graph);
-};
-```
-
-This will display an ASCII tree showing all loaded plugins and their dependencies.
-
 ## Methods
 
 ### load_plugins
@@ -145,8 +92,39 @@ Returns an ASCII representation of the plugin dependency tree wrapped in `<pre>`
 When a plugin is loaded, the configuration is resolved in this order:
 
 1. **Direct Configuration**: If a hash reference is provided directly to the plugin (even empty `{}`), it's used with highest priority.
+
+```perl
+plugin 'Fondation' => {
+    plugins => [
+        { 'MyPlugin' => { title => 'Custom Title' } }
+    ]
+};
+```
+
 2. **Application Configuration**: If no direct configuration is provided (string form or `undef`), the plugin looks for configuration in `$app->config('PluginName')`.
+
+```perl
+# Set configuration in application config
+app->config('MyPlugin' => { title => 'App Title' });
+
+# Load plugin without direct config (string form)
+plugin 'Fondation' => {
+    plugins => [
+        'MyPlugin'  # Will use app config if available, otherwise plugin defaults
+    ]
+};
+```
+
 3. **Plugin Defaults**: If neither direct nor application configuration is found, the plugin uses its own default values (defined with `//` operator).
+
+```perl
+# No configuration provided anywhere
+plugin 'Fondation' => {
+    plugins => [
+        'MyPlugin'  # Will use plugin defaults (no app config)
+    ]
+};
+```
 
 **Note**: An empty hash reference `{}` is treated as explicit empty configuration (direct configuration), while the string form or `undef` triggers the search for application configuration.
 
@@ -156,27 +134,63 @@ See the `t/` directory for comprehensive examples:
 - `t/00-load.t` - Basic loading tests
 - `t/01-recursive-loading.t` - Recursive plugin loading tests
 - `t/02-config-priority.t` - Configuration priority tests
+- `t/03-template-resolution.t` - Template resolution tests
 
-## Development
+## Template Support
 
-### Running Tests
+Fondation automatically discovers and adds template directories from plugins that follow the Mojolicious convention of placing templates in a `share/templates/` directory relative to the plugin's `.pm` file.
 
-```bash
-prove -l t/
+### How It Works
+
+When a plugin is loaded through Fondation, it automatically scans for a `share/templates/` directory in the plugin's distribution path. If found, this directory is added to the application's renderer paths.
+
+### Plugin Template Structure
+
+Plugins can provide templates by organizing them as follows:
+
+```
+MyPlugin/
+├── lib/
+│   └── Mojolicious/
+│       └── Plugin/
+│           └── MyPlugin.pm
+└── share/
+    └── templates/
+        ├── myplugin/
+        │   └── index.html.ep
+        └── welcome.html.ep
 ```
 
-Or with verbose output:
+The plugin can then render these templates using standard Mojolicious template rendering:
 
-```bash
-prove -lv t/
+```perl
+# Inside your plugin's register method
+$app->routes->get('/welcome')->to(
+    template => 'welcome',
+    message => $conf->{message} // 'Hello'
+);
 ```
 
-### Test Structure
+### Template Resolution Priority
 
-The test suite includes example plugins in `t/lib/Mojolicious/Plugin/Fondation/`:
-- `Blog.pm` - Example blog plugin with title configuration
-- `Security.pm` - Security plugin with CSRF protection
-- `Session.pm` - Session management plugin
+Fondation respects Mojolicious's template resolution system, where templates are searched in the order they appear in the renderer paths. Application templates have priority over plugin templates when placed earlier in the path list.
+
+1. **Application Templates**: Templates in the application's template directories are checked first
+2. **Plugin Templates**: Templates from plugins are checked if not found in application directories
+
+This means applications can easily override plugin templates by providing their own version with the same filename in their template directories.
+
+### Example: Overriding a Plugin Template
+
+If a plugin provides `share/templates/welcome.html.ep`, your application can override it by creating its own `welcome.html.ep` in the application's template directory.
+
+```perl
+# In your application
+$app->renderer->paths(['/path/to/app/templates']);
+
+# Create /path/to/app/templates/welcome.html.ep
+# This file will be used instead of the plugin's version
+```
 
 ## Author
 
