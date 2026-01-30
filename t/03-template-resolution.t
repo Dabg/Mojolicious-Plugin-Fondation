@@ -16,21 +16,19 @@ sub create_test_app {
 
     my $app = Mojolicious->new;
 
-    # Charger Fondation d'abord
-    $app->plugin('Fondation' => $fondation_config);
-
-    # Puis ajouter le chemin de surcharge (priorité haute)
     if ($app_templates_dir && -d $app_templates_dir) {
         unshift @{$app->renderer->paths}, $app_templates_dir;
     }
 
-    # Log final pour vérifier l'ordre
-    $app->log->debug("Chemins renderer finaux (app en premier ?) :");
-    $app->log->debug("  $_") for @{$app->renderer->paths};
+    # Configuration seulement si c'est un hash valide
+    if (defined $app_config && ref $app_config eq 'HASH') {
+        $app->config($_ => $app_config->{$_}) for keys %$app_config;
+    }
+
+    $app->plugin('Fondation' => $fondation_config);
 
     return $app;
 }
-
 # Helper pour créer un template temporaire
 sub create_temp_template {
     my ($dir, $rel_path, $content) = @_;

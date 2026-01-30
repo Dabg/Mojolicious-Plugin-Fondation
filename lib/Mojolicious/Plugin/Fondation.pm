@@ -64,16 +64,14 @@ sub load_plugins {
 
         # Load plugin
         my $full_plugin_name = 'Mojolicious::Plugin::' . $name;
-        my $p = $app->plugin($full_plugin_name => $final_args);
+        $app->plugin($full_plugin_name => $final_args);
 
         my $share_dir = $self->share_dir($app, $full_plugin_name, $child_short_name);
-
 
         # Automatically add its share/templates if exists
         $self->_add_plugin_templates_path($app, $share_dir, $child_short_name);
     }
 }
-
 
 
 sub share_dir {
