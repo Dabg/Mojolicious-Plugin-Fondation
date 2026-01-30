@@ -135,6 +135,28 @@ See the `t/` directory for comprehensive examples:
 - `t/01-recursive-loading.t` - Recursive plugin loading tests
 - `t/02-config-priority.t` - Configuration priority tests
 - `t/03-template-resolution.t` - Template resolution tests
+- `t/04-app-config.t` - Application configuration tests
+
+### Example Application
+
+A complete example application is available in `t/myapp.pl`. This application demonstrates:
+
+1. Loading configuration from a file (`myapp.conf`)
+2. Using Fondation with the `Fondation::Blog` test plugin
+3. Displaying the plugin dependency tree
+4. Configuration priority in action
+
+To run the example:
+
+```bash
+cd /path/to/Mojolicious-Plugin-Fondation
+perl -Ilib -It/lib t/myapp.pl daemon   # Start development server
+perl -Ilib -It/lib t/myapp.pl get /    # Test home page
+perl -Ilib -It/lib t/myapp.pl get /blog # Test blog page with config
+perl -Ilib -It/lib t/myapp.pl get /info # Show plugin information
+```
+
+The configuration file (`t/myapp.conf`) sets the blog title, demonstrating how application configuration takes precedence over plugin defaults.
 
 ## Template Support
 

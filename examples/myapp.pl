@@ -4,7 +4,7 @@ use Mojolicious::Lite;
 
 plugin 'Fondation' => {
     plugins => [
-        { 'Fondation::Blog' => { title => 'My Blog'} }
+        { 'Fondation::Blog' => { title => 'My Blog'} },
     ]
 };
 
