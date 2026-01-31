@@ -1,0 +1,10 @@
+{
+  "plugin_name": "MigrationExample",
+  "version": "1.0",
+  "fixtures": [
+    {
+      "table": "example_data",
+      "description": "Initial test data"
+    }
+  ]
+}

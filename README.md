@@ -304,6 +304,66 @@ perl -Ilib -It/lib t/myapp.pl get /migration-example  # Test MigrationExample pl
 
 The application will automatically copy migration files from plugins to `t/share/migrations/`.
 
+## Database Fixture Support
+
+Fondation also automatically discovers and copies database fixture files from plugins that follow the convention of placing fixtures in a `share/fixtures/` directory relative to the plugin's `.pm` file.
+
+### How It Works
+
+When a plugin is loaded through Fondation, it automatically scans for a `share/fixtures/` directory in the plugin's distribution path. If found, Fondation copies all fixture files (any file type) to the application's `share/fixtures/` directory. Existing fixture files with the same name are **not overwritten**, allowing applications to customize fixtures while still getting defaults from plugins.
+
+### Plugin Fixture Structure
+
+Plugins can provide database fixtures by organizing them as follows:
+
+```
+MyPlugin/
+├── lib/
+│   └── Mojolicious/
+│       └── Plugin/
+│           └── MyPlugin.pm
+└── share/
+    └── fixtures/
+        ├── initial_data.sql
+        ├── test_data.json
+        └── config.yaml
+```
+
+### Fixture File Types
+
+Fixture files can be any format: SQL files for direct database insertion, JSON/YAML files for structured data, or any other format your application needs. Fondation copies all files regardless of extension.
+
+### Usage in Applications
+
+Once fixtures are copied to the application's `share/fixtures/` directory, they can be loaded using your application's data loading mechanism. For example:
+
+```perl
+# Load SQL fixtures directly
+my $dbh = DBI->connect('dbi:SQLite:dbname=myapp.db');
+open my $fh, '<', 'share/fixtures/initial_data.sql' or die $!;
+while (my $line = <$fh>) {
+    $dbh->do($line) unless $line =~ /^--/;
+}
+close $fh;
+
+# Or load JSON fixtures
+use JSON;
+my $json_data = JSON->new->decode(
+    path('share/fixtures/test_data.json')->slurp
+);
+```
+
+### Combined Example
+
+The `Fondation::MigrationExample` plugin now demonstrates both migrations AND fixtures:
+
+```bash
+cd /path/to/Mojolicious-Plugin-Fondation
+perl -Ilib -It/lib t/myapp.pl get /migration-info  # Shows both migrations and fixtures
+```
+
+Visit `/migration-info` to see all assets (migrations and fixtures) that were copied from plugins.
+
 ### Error Handling
 
 If the application's home directory is not writable, Fondation logs a debug message and continues without error. This ensures that applications running in read-only environments (like some deployment scenarios) continue to function normally.

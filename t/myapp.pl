@@ -254,7 +254,7 @@ END_INFO
     $c->render(text => $response);
 };
 
-# Route 6: Migration information page (demonstrates migration copying)
+# Route 6: Asset information page (demonstrates migration and fixture copying)
 get '/migration-info' => sub {
     my $c = shift;
 
@@ -264,40 +264,60 @@ get '/migration-info' => sub {
 
     my @migration_files = ();
     if ($migrations_exist) {
-        @migration_files = sort glob("$app_migrations_dir/*.sql");
+        @migration_files = sort glob("$app_migrations_dir/*");
     }
 
-    # Get plugin migration source directory
+    # Check if fixtures directory exists and list fixtures
+    my $app_fixtures_dir = $c->app->home->child('share', 'fixtures');
+    my $fixtures_exist = -d $app_fixtures_dir;
+
+    my @fixture_files = ();
+    if ($fixtures_exist) {
+        @fixture_files = sort glob("$app_fixtures_dir/*");
+    }
+
+    # Get plugin asset source directories
     my $plugin_migrations_dir = "$FindBin::Bin/lib/Mojolicious/Plugin/Fondation/MigrationExample/share/migrations";
-    my @plugin_migration_files = sort glob("$plugin_migrations_dir/*.sql");
+    my @plugin_migration_files = sort glob("$plugin_migrations_dir/*");
+
+    my $plugin_fixtures_dir = "$FindBin::Bin/lib/Mojolicious/Plugin/Fondation/MigrationExample/share/fixtures";
+    my @plugin_fixture_files = sort glob("$plugin_fixtures_dir/*");
 
     my $response = <<"END_INFO";
 <!DOCTYPE html>
 <html>
-<head><title>Migration Copying Demonstration</title>
+<head><title>Asset Copying Demonstration</title>
 <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
     .info-box { background-color: #f0f8ff; border: 1px solid #4a90e2; padding: 15px; border-radius: 5px; margin: 10px 0; }
     .success { color: green; }
     .warning { color: orange; }
     .code { font-family: monospace; background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
+    .asset-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
 </style>
 </head>
 <body>
-<h1>Migration Copying Demonstration</h1>
+<h1>Asset Copying Demonstration</h1>
 
 <div class="info-box">
-<h2>How Migration Copying Works in Fondation</h2>
-<p>When Fondation loads a plugin, it automatically copies migration files from the plugin's <code>share/migrations/</code> directory to the application's <code>share/migrations/</code> directory.</p>
-<p>Existing migration files with the same name are <strong>not overwritten</strong> - this allows applications to customize migrations while still getting defaults from plugins.</p>
+<h2>How Asset Copying Works in Fondation</h2>
+<p>When Fondation loads a plugin, it automatically copies asset files from the plugin's directories to the application's corresponding directories.</p>
+<p>Currently supported asset types:</p>
+<ul>
+<li><strong>Migrations</strong>: Files from <code>share/migrations/</code> are copied to the application's <code>share/migrations/</code></li>
+<li><strong>Fixtures</strong>: Files from <code>share/fixtures/</code> are copied to the application's <code>share/fixtures/</code></li>
+<li><strong>Templates</strong>: The <code>share/templates/</code> directory is automatically added to the template search path</li>
+</ul>
+<p>Existing files with the same name are <strong>not overwritten</strong> - this allows applications to customize assets while still getting defaults from plugins.</p>
 <p>If the application's home directory is not writable, Fondation logs a debug message but continues without error.</p>
 </div>
 
-<h2>Migration Status</h2>
+<div class="asset-section">
+<h2>Migrations Status</h2>
 <p>Application migrations directory: <code>$app_migrations_dir</code></p>
 <p>Directory exists: <strong>@{[$migrations_exist ? 'YES' : 'NO']}</strong></p>
 
-<h2>Plugin Migration Files (Source)</h2>
+<h3>Plugin Migration Files (Source)</h3>
 <p>From <code>Mojolicious::Plugin::Fondation::MigrationExample</code>:</p>
 <ul>
 END_INFO
@@ -314,7 +334,7 @@ END_INFO
     $response .= <<"END_INFO";
 </ul>
 
-<h2>Application Migration Files (Copied)</h2>
+<h3>Application Migration Files (Copied)</h3>
 <ul>
 END_INFO
 
@@ -323,13 +343,54 @@ END_INFO
             my $basename = File::Basename::basename($file);
             $response .= "<li><span class=\"code\">$basename</span></li>\n";
         }
-        $response .= "<li><em>Total: " . scalar(@migration_files) . " migration(s)</em></li>\n";
+        $response .= "<li><em>Total: " . scalar(@migration_files) . " migration file(s)</em></li>\n";
     } else {
         $response .= "<li><em>No migration files copied yet</em></li>\n";
     }
 
     $response .= <<"END_INFO";
 </ul>
+</div>
+
+<div class="asset-section">
+<h2>Fixtures Status</h2>
+<p>Application fixtures directory: <code>$app_fixtures_dir</code></p>
+<p>Directory exists: <strong>@{[$fixtures_exist ? 'YES' : 'NO']}</strong></p>
+
+<h3>Plugin Fixture Files (Source)</h3>
+<p>From <code>Mojolicious::Plugin::Fondation::MigrationExample</code>:</p>
+<ul>
+END_INFO
+
+    if (@plugin_fixture_files) {
+        foreach my $file (@plugin_fixture_files) {
+            my $basename = File::Basename::basename($file);
+            $response .= "<li><span class=\"code\">$basename</span></li>\n";
+        }
+    } else {
+        $response .= "<li><em>No fixture files found in plugin</em></li>\n";
+    }
+
+    $response .= <<"END_INFO";
+</ul>
+
+<h3>Application Fixture Files (Copied)</h3>
+<ul>
+END_INFO
+
+    if (@fixture_files) {
+        foreach my $file (@fixture_files) {
+            my $basename = File::Basename::basename($file);
+            $response .= "<li><span class=\"code\">$basename</span></li>\n";
+        }
+        $response .= "<li><em>Total: " . scalar(@fixture_files) . " fixture file(s)</em></li>\n";
+    } else {
+        $response .= "<li><em>No fixture files copied yet</em></li>\n";
+    }
+
+    $response .= <<"END_INFO";
+</ul>
+</div>
 
 <h2>Test Routes</h2>
 <ul>
@@ -339,7 +400,12 @@ END_INFO
 </ul>
 
 <h2>Next Steps</h2>
-<p>Once migrations are copied to your application's <code>share/migrations/</code> directory, you can apply them using a database migration tool like <code>DBIx::Migrate::Simple</code>.</p>
+<p>Once assets are copied to your application's directories, you can:</p>
+<ul>
+<li>Apply migrations using a database migration tool like <code>DBIx::Migrate::Simple</code></li>
+<li>Load fixtures into your database for testing or initial data</li>
+<li>Use templates provided by plugins (or override them in your application)</li>
+</ul>
 
 </body>
 </html>
@@ -377,7 +443,7 @@ get '/template-subdir-override' => sub {
 # Home page
 get '/' => sub {
     my $c = shift;
-    $c->render(text => 'Welcome to Fondation Test Application. Visit /blog, /template-info, /template-subdir-info, /migration-info or /info');
+    $c->render(text => "Welcome to Fondation Test Application. Visit <a href='/blog'>/blog</a> or <a href='/info'>/info</a>");
 };
 
 app->start;

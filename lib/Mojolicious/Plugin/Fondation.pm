@@ -74,6 +74,9 @@ sub load_plugins {
 
             # Copy migrations from plugin if they exist
             $self->_copy_plugin_migrations($app, $share_dir, $child_short_name);
+
+            # Copy fixtures from plugin if they exist
+            $self->_copy_plugin_fixtures($app, $share_dir, $child_short_name);
         }
     }
 }
@@ -120,11 +123,11 @@ sub _add_plugin_templates_path {
     $app->log->debug("Fondation: Added share/templates from plugin '$child_short_name': $templates_dir");
 }
 
-sub _copy_plugin_migrations {
-    my ($self, $app, $share_dir, $child_short_name) = @_;
+sub _copy_plugin_assets {
+    my ($self, $app, $share_dir, $child_short_name, $asset_type) = @_;
 
-    my $migrations_dir = File::Spec->catdir($share_dir, 'migrations');
-    return unless -d $migrations_dir;
+    my $asset_dir = File::Spec->catdir($share_dir, $asset_type);
+    return unless -d $asset_dir;
 
     # Check if application home is defined and accessible
     my $app_home = $app->home;
@@ -133,41 +136,52 @@ sub _copy_plugin_migrations {
     # Get application's share directory
     my $app_share_dir = $app_home->child('share');
 
-    # Try to create migrations directory if it doesn't exist
-    my $app_migrations_dir = $app_share_dir->child('migrations');
+    # Try to create asset directory if it doesn't exist
+    my $app_asset_dir = $app_share_dir->child($asset_type);
 
     eval {
-        $app_migrations_dir->make_path unless -d $app_migrations_dir;
+        $app_asset_dir->make_path unless -d $app_asset_dir;
     };
     if ($@) {
-        $app->log->debug("Fondation: Cannot create migrations directory at " . $app_migrations_dir . ": $@");
+        $app->log->debug("Fondation: Cannot create $asset_type directory at " . $app_asset_dir . ": $@");
         return;
     }
 
     # Log debug
-    $app->log->debug("Fondation: Found migrations in plugin '$child_short_name': $migrations_dir");
+    $app->log->debug("Fondation: Found $asset_type in plugin '$child_short_name': $asset_dir");
 
-    # Copy migration files that don't already exist
-    my $dir = Mojo::File->new($migrations_dir);
+    # Copy asset files that don't already exist
+    my $dir = Mojo::File->new($asset_dir);
     for my $file ($dir->list->each) {
         next unless -f $file;
 
         my $basename = $file->basename;
-        my $dest = $app_migrations_dir->child($basename);
+        my $dest = $app_asset_dir->child($basename);
 
         if (-e $dest) {
-            $app->log->debug("Fondation: Migration '$basename' already exists in application, skipping");
+            $app->log->debug("Fondation: $asset_type file '$basename' already exists in application, skipping");
             next;
         }
 
         eval {
             $file->copy_to($dest);
-            $app->log->debug("Fondation: Copied migration '$basename' from plugin '$child_short_name' to application");
+            $app->log->debug("Fondation: Copied $asset_type file '$basename' from plugin '$child_short_name' to application");
         };
         if ($@) {
-            $app->log->debug("Fondation: Failed to copy migration '$basename': $@");
+            $app->log->debug("Fondation: Failed to copy $asset_type file '$basename': $@");
         }
     }
+}
+
+# Keep the old method for backward compatibility
+sub _copy_plugin_migrations {
+    my ($self, $app, $share_dir, $child_short_name) = @_;
+    $self->_copy_plugin_assets($app, $share_dir, $child_short_name, 'migrations');
+}
+
+sub _copy_plugin_fixtures {
+    my ($self, $app, $share_dir, $child_short_name) = @_;
+    $self->_copy_plugin_assets($app, $share_dir, $child_short_name, 'fixtures');
 }
 
 # Generate an ASCII representation of the plugin tree
@@ -377,9 +391,23 @@ with the same name are not overwritten.
 This allows plugins to provide database schema migrations that applications
 can apply using tools like L<DBIx::Migrate::Simple>.
 
-Note: Migration copying only occurs if the application's home directory is
-writable. If the directory cannot be created, Fondation logs a debug message
-and continues without error.
+=head2 Database Fixtures
+
+If your plugin has a C<share/fixtures/> directory, Fondation will automatically
+copy the fixture files to the application's C<share/fixtures/> directory
+(when the application's home directory is writable). Existing fixture files
+with the same name are not overwritten.
+
+  # In your plugin directory structure:
+  #   MyPlugin/share/fixtures/initial_data.sql
+  #   MyPlugin/share/fixtures/test_data.json
+
+This allows plugins to provide initial data or test data that applications
+can load into their databases.
+
+Note: Asset copying (migrations and fixtures) only occurs if the application's
+home directory is writable. If the directory cannot be created, Fondation logs
+a debug message and continues without error.
 
 =head1 CONFIGURATION PRIORITY
 
