@@ -29,7 +29,7 @@ BEGIN {
 {
     package TestSchemaDB::Result::TestTable;
     use base 'DBIx::Class::Core';
-    
+
     __PACKAGE__->load_components('InflateColumn::DateTime');
     __PACKAGE__->table('test_table');
     __PACKAGE__->add_columns(
@@ -54,9 +54,9 @@ BEGIN {
 {
     package TestSchemaDB;
     use base 'DBIx::Class::Schema';
-    
+
     our $VERSION = '1';
-    
+
     __PACKAGE__->load_namespaces(
         default_resultset_class => 'ResultSet',
     );
@@ -108,6 +108,12 @@ sub create_test_app {
     my $schema = $migrator->schema;
     isa_ok($schema, 'DBIx::Class::Schema', 'migrator->schema returns a DBIx::Class::Schema');
     isa_ok($schema, 'TestSchemaDB', 'schema is TestSchemaDB');
+
+    my $schema2 = $app->schema;
+    isa_ok($schema2, 'DBIx::Class::Schema', 'app->schema returns a DBIx::Class::Schema');
+    isa_ok($schema2, 'TestSchemaDB', 'schema is TestSchemaDB');
+
+
 
     # Verify that schema is connected and can execute simple query
     my $result = eval { $schema->storage->dbh->do('SELECT 1') };
@@ -202,7 +208,7 @@ sub create_test_app {
             ]
         });
     };
-    like($@, qr/Missing 'schema_class' configuration/, 
+    like($@, qr/Missing 'schema_class' configuration/,
          'explicit empty config overrides app config and fails as expected');
 }
 
