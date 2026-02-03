@@ -4,6 +4,8 @@ package Mojolicious::Plugin::Fondation;
 
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::File 'path';
+use Mojo::Loader;
+use Scalar::Util qw(refaddr);
 
 our $VERSION = '0.01';
 
@@ -13,6 +15,10 @@ our $TREE = {};
 
 sub register {
     my ($self, $app, $conf) = @_;
+
+    if ($ARGV[0] eq 'db' && $ARGV[1] eq 'migration'){
+        $self->is_db_migration(1)
+    }
 
     $TREE->{Fondation} ||= [];  # Initialize the root of the Fondation plugin (short name)
 
@@ -31,7 +37,9 @@ sub short_name {
     return $name;
 }
 
-
+sub is_db_migration {
+    is      => 'rw',
+}
 
 
 # Recursive function to load plugins
@@ -69,20 +77,105 @@ sub load_plugins {
         my $share_dir = $self->share_dir($app, $full_plugin_name, $child_short_name);
 
         # Automatically add its share/templates if exists
-        if ($share_dir) {
+        if (-e $share_dir) {
+
             $self->_add_plugin_templates_path($app, $share_dir, $child_short_name);
 
-            # Copy migrations from plugin if they exist
-            $self->_copy_plugin_migrations($app, $share_dir, $child_short_name);
+            if ( ! $self->is_db_migration) {
 
-            # Copy fixtures from plugin if they exist
-            $self->_copy_plugin_fixtures($app, $share_dir, $child_short_name);
+                # Copy migrations from plugin if they exist
+                $self->_copy_plugin_migrations($app, $share_dir, $child_short_name);
+
+                # Copy fixtures from plugin if they exist
+                $self->_copy_plugin_fixtures($app, $share_dir, $child_short_name);
+            }
+            else{
+                $app->log->debug("$child_short_name: db migration detected, skipping migrations & fixtures");
+            }
+        }
+
+
+        my $plugin_schema_ns = "${full_plugin_name}::Schema";
+
+        my @result_modules   = Mojo::Loader::find_modules("${plugin_schema_ns}::Result");
+        my @resultset_modules = Mojo::Loader::find_modules("${plugin_schema_ns}::ResultSet");
+
+        my @all_modules = (@result_modules, @resultset_modules);
+
+        if (@all_modules) {
+
+            #$app->log->debug("Modules DBIC trouvés pour $name : " . join(', ', @all_modules));
+
+            my $schema;
+            eval {
+                $schema = $app->schema;
+            };
+            if ($@) {
+                die "It seems that the application doesn't have a schema. To address this, you can use the Mojolicious DBSimple plugin. Error: $@\n";
+            }
+
+            # Sépare Result et ResultSet pour plus de clarté
+            my @result_modules   = grep { m{::Result::} } @all_modules;
+            my @resultset_modules = grep { m{::ResultSet::} } @all_modules;
+
+            # Enregistrement des Result (comme avant)
+            for my $module (@result_modules) {
+                eval "require $module" or do {
+                    $app->log->error("Require Result échoué : $@");
+                    next;
+                };
+
+
+                my ($source_name) = $module =~ /::Result::([^:]+)$/;
+                next unless $source_name;
+
+                # Pas de ->new ! On appelle directement sur la classe
+                my $source = $module->result_source_instance;
+
+                $schema->register_extra_source($source_name, $source);
+                $app->log->debug("$child_short_name: Added Result : " . $source_name);
+
+            }
+
+            # Enregistrement des ResultSet personnalisés
+            for my $module (@resultset_modules) {
+                eval "require $module" or do {
+                    $app->log->error("Require ResultSet échoué : $@");
+                    next;
+                };
+
+                my ($rs_name) = $module =~ /::ResultSet::([^:]+)$/;
+                next unless $rs_name;
+
+                my $source_name = $rs_name;
+
+                if (my $source = $schema->source($source_name)) {
+                    $source->resultset_class($module);
+                    $app->log->debug("$child_short_name: Added ResultSet : " . $source_name);
+
+                    # $app->log->debug("ResultSet attaché : $rs_name => $module sur source $source_name");
+                } else {
+                    $app->log->warn("Source $source_name manquante pour ResultSet $rs_name");
+                }
+            }
+            # $app->log->debug("Sources finales après tout : " . join(", ", $schema->sources));
+
         }
     }
 }
 
+sub extract_relative_path {
+    my ($log_message) = @_;
 
-sub share_dir {
+    # Use a regular expression to capture everything after "Plugin/"
+    if ($log_message =~ /Plugin\/(.*)/) {
+        return "..." . $1;  # Return the captured portion
+    }
+
+    return;  # Return undefined if the string does not match
+}
+
+sub plugin_lib_dir {
     my $self = shift;
     my $app = shift;
     my $full_plugin_name = shift;
@@ -96,6 +189,18 @@ sub share_dir {
     return unless defined $plugin_file && -f $plugin_file;
 
     my $plugin_lib_dir = File::Basename::dirname($plugin_file);
+
+    return $plugin_lib_dir;
+}
+
+
+
+sub share_dir {
+    my ($self, $app, $full_plugin_name, $child_short_name) = @_;
+
+    my $plugin_lib_dir = $self->plugin_lib_dir($app,$full_plugin_name,$child_short_name);
+
+    return unless $plugin_lib_dir;
 
     # Le short_name est 'Fondation::TemplateTest', mais le dossier est 'TemplateTest'
     my $child_folder = $child_short_name;
@@ -120,7 +225,7 @@ sub _add_plugin_templates_path {
 
     push @$paths, $templates_dir;
 
-    $app->log->debug("Fondation: Added share/templates from plugin '$child_short_name': $templates_dir");
+    $app->log->debug("$child_short_name: Added share/templates : " . extract_relative_path($templates_dir));
 }
 
 sub _copy_plugin_assets {
@@ -143,35 +248,44 @@ sub _copy_plugin_assets {
         $app_asset_dir->make_path unless -d $app_asset_dir;
     };
     if ($@) {
-        $app->log->debug("Fondation: Cannot create $asset_type directory at " . $app_asset_dir . ": $@");
+        $app->log->debug("$child_short_name: Cannot create $asset_type directory at " . $app_asset_dir . ": $@");
         return;
     }
 
     # Log debug
-    $app->log->debug("Fondation: Found $asset_type in plugin '$child_short_name': $asset_dir");
+    $app->log->debug("$child_short_name: Found $asset_type : " . extract_relative_path($asset_dir));
 
-    # Copy asset files that don't already exist
-    my $dir = Mojo::File->new($asset_dir);
-    for my $file ($dir->list->each) {
+
+    my $src_root = Mojo::File->new($asset_dir);
+
+    for my $file ($src_root->list_tree({ hidden => 1 })->each) {
+
         next unless -f $file;
 
-        my $basename = $file->basename;
-        my $dest = $app_asset_dir->child($basename);
+        # Chemin relatif depuis la racine source
+        my $rel  = $file->to_rel($src_root);
+
+        # Destination complète avec arborescence
+        my $dest = $app_asset_dir->child($rel);
+
+        # Crée les répertoires parents si nécessaires
+        $dest->dirname->make_path;
 
         if (-e $dest) {
-            $app->log->debug("Fondation: $asset_type file '$basename' already exists in application, skipping");
+            #$app->log->debug("$child_short_name: file '$rel' already exists, skipping");
             next;
         }
 
         eval {
             $file->copy_to($dest);
-            $app->log->debug("Fondation: Copied $asset_type file '$basename' from plugin '$child_short_name' to application");
+            $app->log->debug("$child_short_name: Copied file '$rel'");
         };
         if ($@) {
-            $app->log->debug("Fondation: Failed to copy $asset_type file '$basename': $@");
+            $app->log->debug("$child_short_name: Failed to copy '$rel': $@");
         }
     }
 }
+
 
 # Keep the old method for backward compatibility
 sub _copy_plugin_migrations {
@@ -257,6 +371,7 @@ configuration management system with three levels of priority:
 =item 1. Direct configuration (highest priority)
 
 =item 2. Application configuration (medium priority)
+         - "Requires the Mojolicious Config plugin."
 
 =item 3. Default plugin configuration (lowest priority)
 
