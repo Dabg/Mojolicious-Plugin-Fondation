@@ -8,7 +8,6 @@ use Mojo::File;
 use Path::Tiny qw(path);
 
 use lib 't/lib';
-use lib 'lib';
 use Mojolicious qw(-signatures);
 
 # Check if required modules are available
@@ -61,6 +60,9 @@ BEGIN {
         default_resultset_class => 'ResultSet',
     );
 }
+
+# Make the schema loadable via require
+$INC{'TestSchemaDB.pm'} = __FILE__;
 
 # Test DBSimple integration with Fondation
 # plan will be calculated at the end with done_testing
@@ -200,7 +202,8 @@ sub create_test_app {
 
     # Load Fondation with explicit empty config (highest priority)
     # Even empty hash {} means explicit empty config, which should cause
-    # the plugin to use its defaults (and fail because schema_class missing)
+    # the plugin to fail because schema_class is missing
+    # DBSimple validates configuration when migrator is accessed
     eval {
         $app->plugin('Fondation' => {
             plugins => [
@@ -208,8 +211,20 @@ sub create_test_app {
             ]
         });
     };
-    like($@, qr/Missing 'schema_class' configuration/,
+    
+    # The plugin may not fail immediately (lazy validation)
+    my $error = $@;
+    if (!$error) {
+        # Try to trigger validation by accessing migrator
+        eval { $app->migrator; };
+        $error = $@;
+    }
+    
+    # Should fail because schema_class is missing (empty config overrides app config)
+    like($error, qr/Missing 'schema_class' configuration|schema_class manquant/,
          'explicit empty config overrides app config and fails as expected');
 }
 
 done_testing;
+
+1;

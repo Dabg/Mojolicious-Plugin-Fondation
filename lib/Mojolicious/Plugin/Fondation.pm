@@ -16,8 +16,8 @@ our $TREE = {};
 sub register {
     my ($self, $app, $conf) = @_;
 
-    if ($ARGV[0] eq 'db' && $ARGV[1] eq 'migration'){
-        $self->is_db_migration(1)
+    if (defined $ARGV && $ARGV[0] eq 'db' && $ARGV[1] eq 'migration'){
+        $self->is_db_migration(1);
     }
 
     $TREE->{Fondation} ||= [];  # Initialize the root of the Fondation plugin (short name)
@@ -34,13 +34,17 @@ sub short_name {
     my ($self, $name) = @_;
     $name //= ref($self) || $self;           # if no arg, use current class/object
     $name =~ s/^Mojolicious::Plugin:://;
+    $name =~ s/\+//;
     return $name;
 }
 
 sub is_db_migration {
-    is      => 'rw',
+    my ($self, $value) = @_;
+    if (@_ == 2) {
+        $self->{is_db_migration} = $value;
+    }
+    return $self->{is_db_migration};
 }
-
 
 # Recursive function to load plugins
 sub load_plugins {
@@ -48,6 +52,7 @@ sub load_plugins {
     my $parent = $self->short_name;
 
     for my $plugin (@$plugins) {
+
         my ($name, $args);
         if (ref $plugin eq 'HASH') {
             ($name) = keys %$plugin;
@@ -70,8 +75,8 @@ sub load_plugins {
             unless grep { $_ eq $child_short_name } @{$TREE->{$parent}};
         $TREE->{$child_short_name} ||= [];
 
-        # Load plugin
         my $full_plugin_name = 'Mojolicious::Plugin::' . $name;
+
         $app->plugin($full_plugin_name => $final_args);
 
         my $share_dir = $self->share_dir($app, $full_plugin_name, $child_short_name);
@@ -99,6 +104,7 @@ sub load_plugins {
 
         my @result_modules   = Mojo::Loader::find_modules("${plugin_schema_ns}::Result");
         my @resultset_modules = Mojo::Loader::find_modules("${plugin_schema_ns}::ResultSet");
+
 
         my @all_modules = (@result_modules, @resultset_modules);
 

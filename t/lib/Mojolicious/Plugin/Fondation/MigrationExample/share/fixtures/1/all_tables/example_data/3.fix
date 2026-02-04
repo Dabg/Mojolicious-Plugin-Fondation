@@ -1,0 +1,6 @@
+$HASH1 = {
+           name => 'sample',
+           value => 200,
+           description => 'Sample record from fixtures',
+           id => 3
+         };

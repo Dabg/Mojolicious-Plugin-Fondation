@@ -1,0 +1,33 @@
+package Mojolicious::Plugin::Fondation::MigrationExample::Schema::Result::ExampleData;
+
+use base 'DBIx::Class::Core';
+
+__PACKAGE__->load_components('InflateColumn::DateTime');
+__PACKAGE__->table('example_data');
+__PACKAGE__->add_columns(
+    id => {
+        data_type => 'integer',
+        is_auto_increment => 1,
+        is_nullable => 0,
+    },
+    name => {
+        data_type => 'varchar',
+        size => 255,
+        is_nullable => 1,
+    },
+    value => {
+        data_type => 'integer',
+        is_nullable => 1,
+    },
+    created_at => {
+        data_type => 'datetime',
+        is_nullable => 1,
+    },
+    description => {
+        data_type => 'text',
+        is_nullable => 1,
+    },
+);
+__PACKAGE__->set_primary_key('id');
+
+1;
