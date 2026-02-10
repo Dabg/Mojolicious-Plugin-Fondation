@@ -46,38 +46,38 @@ plugin 'Fondation' => { ... };
 # In your Mojolicious application
 use Mojolicious::Lite;
 
-# Load Fondation with direct dependencies
+# Load Fondation with direct dependencies (short names are recommended)
 plugin 'Fondation' => {
     dependencies => [
-        'Mojolicious::Plugin::Fondation::User',
-        'Mojolicious::Plugin::Fondation::Authorization',
+        'Fondation::User',
+        'Fondation::Authorization',
     ]
 };
 
 # Plugins are loaded recursively. The resulting dependency tree:
 # ● Fondation
-#  └─ Mojolicious::Plugin::Fondation::User
-#  └─ Mojolicious::Plugin::Fondation::Authorization
-#     └─ Mojolicious::Plugin::Fondation::Role
-#     └─ Mojolicious::Plugin::Fondation::Permission
+#  └─ Fondation::User
+#  └─ Fondation::Authorization
+#     └─ Fondation::Role
+#     └─ Fondation::Permission
 ```
 
 ### With Configuration File
 
-First, create a configuration file (`myapp.conf`):
+First, create a configuration file (`myapp.conf`) using short plugin names:
 
 ```perl
 {
-  'Mojolicious::Plugin::Fondation' => {
+  'Fondation' => {
     dependencies => [
-      { 'Mojolicious::Plugin::Fondation::User' => { title => 'User Management' } },
-      'Mojolicious::Plugin::Fondation::Authorization',
+      { 'Fondation::User' => { title => 'User Management' } },
+      'Fondation::Authorization',
     ]
   },
-  'Mojolicious::Plugin::Fondation::Authorization' => {
+  'Fondation::Authorization' => {
     dependencies => [
-      'Mojolicious::Plugin::Fondation::Role',
-      'Mojolicious::Plugin::Fondation::Permission',
+      'Fondation::Role',
+      'Fondation::Permission',
     ]
   }
 }
@@ -242,11 +242,11 @@ Get a visual representation of the plugin dependency hierarchy:
 my $tree = $app->fondation_tree;
 print $tree;
 # Output:
-# ● Mojolicious::Plugin::Fondation
-#  └─ Mojolicious::Plugin::Fondation::User
-#  └─ Mojolicious::Plugin::Fondation::Authorization
-#     └─ Mojolicious::Plugin::Fondation::Role
-#     └─ Mojolicious::Plugin::Fondation::Permission
+# ● Fondation
+#  └─ Fondation::User
+#  └─ Fondation::Authorization
+#     └─ Fondation::Role
+#     └─ Fondation::Permission
 
 # Or directly from Fondation instance
 my $tree = $app->fondation->dependency_tree;

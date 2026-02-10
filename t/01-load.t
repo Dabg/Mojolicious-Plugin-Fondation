@@ -97,25 +97,25 @@ sub write_config {
     open my $fh, '>', $file or die "Cannot write $file: $!";
     print $fh <<'CONFIG';
 {
- 'Mojolicious::Plugin::Fondation' => {
+ 'Fondation' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::User',
-         'Mojolicious::Plugin::Fondation::Authorization',
+         'Fondation::User',
+         'Fondation::Authorization',
     ]
   },
- 'Mojolicious::Plugin::Fondation::Authorization' => {
+ 'Fondation::Authorization' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::Role',
-         'Mojolicious::Plugin::Fondation::Permission',
+         'Fondation::Role',
+         'Fondation::Permission',
     ]
   },
- 'Mojolicious::Plugin::Fondation::User' => {
+ 'Fondation::User' => {
      # No dependencies for User
   },
- 'Mojolicious::Plugin::Fondation::Role' => {
+ 'Fondation::Role' => {
      # No dependencies for Role
   },
- 'Mojolicious::Plugin::Fondation::Permission' => {
+ 'Fondation::Permission' => {
      # No dependencies for Permission
   }
 }

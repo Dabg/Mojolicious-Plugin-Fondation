@@ -169,12 +169,12 @@ ok(!exists $registry3->{'Mojolicious::Plugin::Fondation::Permission'},
         my $conf_file = File::Spec->catfile($tempdir, 'test_hierarchy.conf');
         $write_config->($conf_file, <<'CONFIG');
 {
- 'Mojolicious::Plugin::Fondation' => {
+ 'Fondation' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::User'
+         'Fondation::User'
      ]
   },
- 'Mojolicious::Plugin::Fondation::User' => {
+ 'Fondation::User' => {
      key_test => 'global_config'
   }
 }
@@ -193,9 +193,9 @@ CONFIG
         my $conf_file = File::Spec->catfile($tempdir, 'test_hierarchy.conf');
         $write_config->($conf_file, <<'CONFIG');
 {
- 'Mojolicious::Plugin::Fondation' => {
+ 'Fondation' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::User'
+         'Fondation::User'
      ]
   }
 }
@@ -216,25 +216,25 @@ sub write_config {
     open my $fh, '>', $file or die "Cannot write $file: $!";
     print $fh <<'CONFIG';
 {
- 'Mojolicious::Plugin::Fondation' => {
+ 'Fondation' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::User',
-         'Mojolicious::Plugin::Fondation::Authorization',
+         'Fondation::User',
+         'Fondation::Authorization',
     ]
   },
- 'Mojolicious::Plugin::Fondation::Authorization' => {
+ 'Fondation::Authorization' => {
      dependencies => [
-         'Mojolicious::Plugin::Fondation::Role',
-         'Mojolicious::Plugin::Fondation::Permission',
+         'Fondation::Role',
+         'Fondation::Permission',
     ]
   },
- 'Mojolicious::Plugin::Fondation::User' => {
+ 'Fondation::User' => {
      # No dependencies for User
   },
- 'Mojolicious::Plugin::Fondation::Role' => {
+ 'Fondation::Role' => {
      # No dependencies for Role
   },
- 'Mojolicious::Plugin::Fondation::Permission' => {
+ 'Fondation::Permission' => {
      # No dependencies for Permission
   }
 }

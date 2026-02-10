@@ -20,51 +20,107 @@ sub register ($self, $app, $conf = {}) {
     return $self;
 }
 
+# Convert short plugin name to full Mojolicious plugin name
+sub _normalize_plugin_name ($self, $plugin_name) {
+    # If it's already a full Mojolicious plugin name, keep it
+    return $plugin_name if $plugin_name =~ /^Mojolicious::Plugin::/;
+
+    # Otherwise, add Mojolicious::Plugin:: prefix
+    return "Mojolicious::Plugin::$plugin_name";
+}
+
+# Convert full Mojolicious plugin name to short name for display
+sub _shorten_plugin_name ($self, $plugin_name) {
+    # Remove Mojolicious::Plugin:: prefix
+    $plugin_name =~ s/^Mojolicious::Plugin:://;
+    return $plugin_name;
+}
+
+# Get configuration for a plugin (only short names in config files)
+sub _get_plugin_config ($self, $app, $plugin_name) {
+    my $config = {};
+
+    # Get normalized (long) name and short name
+    my $long_name = $self->_normalize_plugin_name($plugin_name);
+    my $short_name = $self->_shorten_plugin_name($long_name);
+    
+    # Only look for short name in configuration files
+    # Users will use short names exclusively in their configs
+    if (my $conf = $app->config($short_name)) {
+        $config = $conf if ref $conf eq 'HASH';
+    }
+
+    return $config;
+}
+
+# Normalize a dependency (string or hash) to use full plugin names
+sub _normalize_dependency ($self, $dep) {
+    if (ref $dep eq 'HASH') {
+        # Format: { 'Plugin::Name' => { config_hash } }
+        my ($dep_name, $dep_conf) = each %$dep;
+        my $normalized_name = $self->_normalize_plugin_name($dep_name);
+        return { $normalized_name => $dep_conf };
+    } else {
+        # String format: 'Plugin::Name'
+        my $normalized_name = $self->_normalize_plugin_name($dep);
+        return $normalized_name;
+    }
+}
+
 
 
 # Get dependencies for a plugin from direct config or global config
 sub _get_dependencies ($self, $app, $conf, $instance = undef) {
+    my $dependencies = [];
 
     # If direct config has dependencies, use them (highest priority)
     if ($conf && ref $conf eq 'HASH' && exists $conf->{dependencies}) {
-        return $conf->{dependencies};
+        $dependencies = $conf->{dependencies};
     }
-
     # Otherwise, check global config (returns undef if Config plugin not loaded)
-    my $global_conf = $app->config(($instance && ref($instance)) || __PACKAGE__);
-    if ($global_conf && ref $global_conf eq 'HASH' && exists $global_conf->{dependencies}) {
-        return $global_conf->{dependencies};
+    elsif (my $global_conf = $app->config(($instance && ref($instance)) || __PACKAGE__)) {
+        if (ref $global_conf eq 'HASH' && exists $global_conf->{dependencies}) {
+            $dependencies = $global_conf->{dependencies};
+        }
+    }
+    # Check plugin's default configuration
+    elsif ($instance && $instance->can('conf') && defined $instance->conf->{dependencies}) {
+        $dependencies = $instance->conf->{dependencies};
     }
 
-    if ( $instance->can('conf') && defined $instance->conf->{dependencies}){
-        return $instance->conf->{dependencies};
+    # Normalize all dependencies to use full plugin names
+    my @normalized_deps;
+    foreach my $dep (@$dependencies) {
+        push @normalized_deps, $self->_normalize_dependency($dep);
     }
 
-    # No dependencies found
-    return [];
+    return \@normalized_deps;
 }
 
 # Load a plugin and its dependencies recursively (depth-first)
 sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
-    # Return already loaded plugin instance
-    if (my $entry = $self->plugin_registry->{$plugin_name}) {
+    # Normalize plugin name to full Mojolicious plugin name
+    my $normalized_name = $self->_normalize_plugin_name($plugin_name);
+
+    # Return already loaded plugin instance (check with normalized name)
+    if (my $entry = $self->plugin_registry->{$normalized_name}) {
         return $entry->{instance};
     }
 
-    # Get configuration for this specific plugin from global config
-    my $global_plugin_conf = $app->config($plugin_name) || {};
+    # Get configuration for this plugin (trying both short and long names)
+    my $global_plugin_conf = $self->_get_plugin_config($app, $plugin_name);
 
     # Merge configs: direct config (plugin_conf) takes priority over global config
     my $merged_conf = { %$global_plugin_conf, %$plugin_conf };
 
     # Load the plugin itself (parent)
     my $instance;
-    if ($plugin_name eq __PACKAGE__) {
+    if ($normalized_name eq __PACKAGE__) {
         # Fondation plugin itself
         $instance = $self;
     } else {
-        # Load other plugin via Mojolicious
-        $instance = $app->plugin($plugin_name => $merged_conf);
+        # Load other plugin via Mojolicious (using normalized name)
+        $instance = $app->plugin($normalized_name => $merged_conf);
     }
 
 
@@ -90,7 +146,8 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
     }
 
 
-    # Register the plugin in our registry
+    # Register the plugin in our registry using its actual class name (from ref)
+    # This will be the full normalized name
     $self->plugin_registry->{ref($instance)} = {
         requires  => $dependencies,
         instance  => $instance,
@@ -101,7 +158,8 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
 
 # Generate a text representation of the plugin dependency tree
 sub dependency_tree ($self) {
-    my $tree = "● " . __PACKAGE__ . "\n";
+    my $short_name = $self->_shorten_plugin_name(__PACKAGE__);
+    my $tree = "● " . $short_name . "\n";
     $tree .= $self->_build_tree(__PACKAGE__, 0, {});
     return $tree;
 }
@@ -133,7 +191,9 @@ sub _build_tree ($self, $plugin_name, $depth, $visited) {
         my $child_depth = $depth + 1;
         my $indent = $child_depth == 0 ? "" : " " x (($child_depth - 1) * 4 + 1);
 
-        $output .= $indent . "└─ " . $dep_name . "\n";
+        # Display short name
+        my $short_name = $self->_shorten_plugin_name($dep_name);
+        $output .= $indent . "└─ " . $short_name . "\n";
         $output .= $self->_build_tree($dep_name, $child_depth, $visited);
     }
 
@@ -150,20 +210,20 @@ Mojolicious::Plugin::Fondation - Recursive plugin dependency loader for Mojolici
 
 =head1 SYNOPSIS
 
-  # In your Mojolicious application
+  # In your Mojolicious application (short names are recommended)
   plugin 'Fondation' => {
     dependencies => [
-      'Mojolicious::Plugin::Fondation::User',
-      'Mojolicious::Plugin::Fondation::Authorization',
+      'Fondation::User',
+      'Fondation::Authorization',
     ]
   };
 
   # Or with Config plugin loaded, define dependencies in config file:
   # {
-  #   'Mojolicious::Plugin::Fondation' => {
+  #   'Fondation' => {
   #     dependencies => [
-  #       'Mojolicious::Plugin::Fondation::User',
-  #       'Mojolicious::Plugin::Fondation::Authorization',
+  #       'Fondation::User',
+  #       'Fondation::Authorization',
   #     ]
   #   }
   # }
@@ -188,11 +248,11 @@ a C<dependencies> array reference with plugin names to load.
   my $tree = $plugin->dependency_tree;
   # Returns a text representation of the plugin dependency tree
   # Example:
-  # ● Mojolicious::Plugin::Fondation
-  #  └─ Mojolicious::Plugin::Fondation::User
-  #  └─ Mojolicious::Plugin::Fondation::Authorization
-  #     └─ Mojolicious::Plugin::Fondation::Role
-  #     └─ Mojolicious::Plugin::Fondation::Permission
+  # ● Fondation
+  #  └─ Fondation::User
+  #  └─ Fondation::Authorization
+  #     └─ Fondation::Role
+  #     └─ Fondation::Permission
 
 =head1 HELPERS
 
@@ -211,7 +271,7 @@ The plugin adds two helpers to your Mojolicious application:
 
 =head1 CONFIGURATION
 
-Dependencies can be specified in two ways:
+Dependencies can be specified in two ways. Note that short plugin names (e.g., C<Fondation::User>) are recommended and will be automatically expanded to full Mojolicious plugin names (C<Mojolicious::Plugin::Fondation::User>).
 
 =over 4
 
@@ -219,29 +279,29 @@ Dependencies can be specified in two ways:
 
   plugin 'Fondation' => {
     dependencies => [
-      'Mojolicious::Plugin::Fondation::User',
-      { 'Mojolicious::Plugin::Fondation::Authorization' => { setting => 'value' } }
+      'Fondation::User',
+      { 'Fondation::Authorization' => { setting => 'value' } }
     ]
   };
 
 =item 2. Global configuration (when Config plugin is loaded):
 
-  # In your config file
+  # In your config file (use short names)
   {
-    'Mojolicious::Plugin::Fondation' => {
+    'Fondation' => {
       dependencies => [
-        { 'Mojolicious::Plugin::Fondation::User' => { title => 'User' } },
-        'Mojolicious::Plugin::Fondation::Authorization'
+        { 'Fondation::User' => { title => 'User' } },
+        'Fondation::Authorization'
       ]
     }
   }
 
 =back
 
-Plugin-specific configuration can also be provided in the global config:
+Plugin-specific configuration can also be provided in the global config (use short names):
 
   {
-    'Mojolicious::Plugin::Fondation::User' => {
+    'Fondation::User' => {
       some_setting => 'value',
       dependencies => ['Plugin::C']  # This plugin can have its own dependencies
     }
