@@ -1,0 +1,9 @@
+Revision history for Mojolicious-Plugin-Fondation
+
+{{$NEXT}}
+
+0.01     2026-02-10
+    - Initial release
+    - Hierarchical plugin loading with load_plugins method
+    - Configuration priority: direct > application > default
+    - Plugin dependency tree visualization with fondation_tree() method
