@@ -19,7 +19,7 @@ has share_dir => sub {
     $sub_path =~ s{::}{/}g;
 
     # --- 1. TEST (t/share/...) ---
-    if ($ENV{HARNESS_ACTIVE}) {
+    if ($ENV{HARNESS_ACTIVE} || $ENV{USE_SHARE_DIR_TEST}) {
         # mojo_home->child('t', 'share', ...)
         my $path = $self->home->child('t', 'share', $sub_path);
         return $path if -d $path;
