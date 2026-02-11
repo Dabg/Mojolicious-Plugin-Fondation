@@ -1,16 +1,18 @@
 package Mojolicious::Plugin::Fondation::Base;
+# ABSTRACT: Base class for Fondation plugins providing shared directory support
+
 use Mojo::Base 'Mojolicious::Plugin', -signatures;
 use Mojo::Home;
 use File::ShareDir qw(dist_dir);
 
-# On initialise le "Home" de Mojo
+# Initialize Mojo's "Home"
 has home => sub { Mojo::Home->new };
 
 has share_dir => sub {
     my $self = shift;
     my $class = ref $self;
 
-    # Transformation : Mojolicious::Plugin::Fondation::User::Admin
+    # Transformation: Mojolicious::Plugin::Fondation::User::Admin
     # -> fondation/user/admin
     my $sub_path = lc($class);
     $sub_path =~ s{^mojolicious::plugin::}{};
@@ -27,7 +29,7 @@ has share_dir => sub {
     my $local = $self->home->child('share', $sub_path);
     return $local if -d $local;
 
-    # --- 3. INSTALLÉ (File::ShareDir) ---
+    # --- 3. INSTALLED (File::ShareDir) ---
     my @parts = split '::', $class;
     my $dist_name = join '-', @parts[0..2]; # Ex: Mojolicious-Plugin-Fondation
 

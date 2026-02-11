@@ -177,7 +177,7 @@ if ($template_file && -e $template_file) {
 }
 
 if ($user_template_dir && -d $user_template_dir ){
-    rmdir $user_template_dir or warn "Could not remove $user_template_dir: $!";
+#    rmdir $user_template_dir or warn "Could not remove $user_template_dir: $!";
 }
 
 done_testing();

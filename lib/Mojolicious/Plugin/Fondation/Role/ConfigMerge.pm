@@ -1,4 +1,5 @@
 package Mojolicious::Plugin::Fondation::Role::ConfigMerge;
+# ABSTRACT: Role for merging configuration in Fondation plugins
 
 use Mojo::Base -role, -signatures;
 

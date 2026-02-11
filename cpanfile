@@ -15,7 +15,6 @@ recommends 'Mojolicious::Plugin::Config' => '2.00';  # For configuration merging
 # Testing dependencies
 on test => sub {
     requires 'Test::More' => '1.00';
-    requires 'Test::Mojo' => '6.00';  # Bundled with Mojolicious
     requires 'File::Temp' => '0.01';
     requires 'File::Spec' => '3.00';
     requires 'FindBin' => '1.00';

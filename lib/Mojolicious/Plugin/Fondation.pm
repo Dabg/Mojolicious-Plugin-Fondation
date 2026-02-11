@@ -1,5 +1,7 @@
 package Mojolicious::Plugin::Fondation;
 
+# ABSTRACT: Hierarchical plugin loader with configuration priority
+
 use Mojo::Base 'Mojolicious::Plugin::Fondation::Base', -signatures;
 
 # Registry of loaded plugins: plugin_name => { requires => [], instance => $plugin_obj }
@@ -43,7 +45,7 @@ sub _get_plugin_config ($self, $app, $plugin_name) {
     # Get normalized (long) name and short name
     my $long_name = $self->_normalize_plugin_name($plugin_name);
     my $short_name = $self->_shorten_plugin_name($long_name);
-    
+
     # Only look for short name in configuration files
     # Users will use short names exclusively in their configs
     if (my $conf = $app->config($short_name)) {
@@ -123,6 +125,10 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
         $instance = $app->plugin($normalized_name => $merged_conf);
     }
 
+    $app->log->debug(ref($instance) . " loaded");
+
+    # Add plugin's template directory to renderer paths
+    my $template_dir = $self->_add_plugin_templates_path($app, $instance);
 
     # Get dependencies for this plugin
     my $dependencies = $self->_get_dependencies($app, $merged_conf, $instance);
@@ -151,9 +157,28 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
     $self->plugin_registry->{ref($instance)} = {
         requires  => $dependencies,
         instance  => $instance,
+        template_dir => $template_dir,
     };
 
     return $instance;
+}
+
+# Add plugin's template directory to renderer paths if it exists
+sub _add_plugin_templates_path ($self, $app, $instance) {
+    # Only plugins that inherit from Fondation::Base have share_dir method
+    return unless $instance->can('share_dir');
+
+    my $share_dir = $instance->share_dir;
+    return unless $share_dir;
+
+    return if ! -d $share_dir;
+
+    my $template_dir = $share_dir->child('templates');
+    return unless -d $template_dir;
+
+    push @{$app->renderer->paths}, $template_dir->to_string;
+
+    return $template_dir->to_string;
 }
 
 # Generate a text representation of the plugin dependency tree

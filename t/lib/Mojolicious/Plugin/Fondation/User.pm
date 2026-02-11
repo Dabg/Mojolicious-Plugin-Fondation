@@ -9,14 +9,8 @@ has conf => sub { { key_test => 'plugin_default' } };
 sub register {
     my ($self, $app, $conf) = @_;
 
-    my $share = $self->share_dir;
-
-    # to test share_dir
-    my $template_dir = $share->child('templates');
-    if (-d $template_dir) {
-        push @{$app->renderer->paths}, $template_dir->to_string;
-    }
-
+    # Note: template directories are automatically added by Fondation
+    # via _add_plugin_templates_path
 
     $app->config->{fondation_user_config} = $conf->{key_test};
 
