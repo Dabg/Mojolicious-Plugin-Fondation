@@ -5,6 +5,7 @@ use Mojo::Base -role, -signatures;
 
 around register => sub {
   my ($orig, $self, $app, $merged_conf) = @_;
+  $self->app($app);
 
   my $plugin_name = ref $self || $self;
 

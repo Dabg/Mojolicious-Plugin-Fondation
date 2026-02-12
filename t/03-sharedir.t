@@ -124,8 +124,10 @@ ok($found_template_path, 'Template directory was added to renderer paths');
     # Temporarily unset HARNESS_ACTIVE
     local $ENV{HARNESS_ACTIVE} = 0;
 
-    # Create another app to test fallback behavior
-    my $t2 = Test::Mojo->new('Mojolicious');
+    # Create another app to test fallback behavior using create_test_app
+    my $tempdir2 = tempdir(CLEANUP => 1);
+    my $app2 = create_test_app($tempdir2);
+    my $t2 = Test::Mojo->new($app2);
     $t2->app->plugin('Config' => {file => $conf_file});
     $t2->app->plugin('Fondation');
 
