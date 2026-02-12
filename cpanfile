@@ -19,6 +19,9 @@ on test => sub {
     requires 'File::Spec' => '3.00';
     requires 'FindBin' => '1.00';
     requires 'File::Path' => '2.00';
+    requires 'DBIx::Class' => '0.082840';
+    requires 'DBD::SQLite' => '1.70';
+    requires 'Mojolicious::Plugin::Migration' => '0.01';
 };
 
 # Development dependencies (for author)

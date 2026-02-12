@@ -81,7 +81,7 @@ subtest 'Plugin with share/templates directory' => sub {
 
 subtest 'Template rendering from plugin' => sub {
 
-    # Création d'une mini-application de test
+    # Create a mini test application
     my $t = Test::Mojo->new;
     my $app = $t->app;
 

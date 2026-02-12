@@ -103,6 +103,7 @@ sub _get_dependencies ($self, $app, $conf, $instance = undef) {
 sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
     # Normalize plugin name to full Mojolicious plugin name
     my $normalized_name = $self->_normalize_plugin_name($plugin_name);
+    my $short_name = $self->_shorten_plugin_name($plugin_name);
 
     # Return already loaded plugin instance (check with normalized name)
     if (my $entry = $self->plugin_registry->{$normalized_name}) {
@@ -117,6 +118,8 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
 
     # Load the plugin itself (parent)
     my $instance;
+    #my @instance;
+
     if ($normalized_name eq __PACKAGE__) {
         # Fondation plugin itself
         $instance = $self;
@@ -125,10 +128,27 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
         $instance = $app->plugin($normalized_name => $merged_conf);
     }
 
-    $app->log->debug(ref($instance) . " loaded");
+    # Il ne s'agit pas d'un plugin Fondation car leur register retourne le plugin lui-meme
+    if ( $instance !~ /Mojolicious::Plugin/ ) {
+        $app->log->debug("$short_name loaded");
+        return;
+    }
 
-    # Add plugin's template directory to renderer paths
-    my $template_dir = $self->_add_plugin_templates_path($app, $instance);
+    $app->log->debug($self->_shorten_plugin_name(ref($instance)) . " loaded");
+
+    my $template_dir;
+    my $nb_dbic = 0;
+    if ( $instance->can('share_dir') && $instance->share_dir ){
+        # Add plugin's template directory to renderer paths
+        $template_dir = $self->_add_plugin_templates_path($app, $instance);
+
+
+        # load DBIC components
+        $nb_dbic = $self->_add_plugin_dbic_components($app, $instance);
+        if ($nb_dbic) {
+            #$app->log->info("Plugin $short_name : $nb_dbic DBIC components integrated");
+        }
+    }
 
     # Get dependencies for this plugin
     my $dependencies = $self->_get_dependencies($app, $merged_conf, $instance);
@@ -158,6 +178,7 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
         requires  => $dependencies,
         instance  => $instance,
         template_dir => $template_dir,
+        dbic_components_added => $nb_dbic,
     };
 
     return $instance;
@@ -177,9 +198,106 @@ sub _add_plugin_templates_path ($self, $app, $instance) {
     return unless -d $template_dir;
 
     push @{$app->renderer->paths}, $template_dir->to_string;
-
+    my ($short_template) = $template_dir =~ m{ share/ (.*) }x;
+    $app->log->debug($self->_shorten_plugin_name(ref($instance)) . " : add template_dir : " . $short_template);
     return $template_dir->to_string;
 }
+
+# Dynamically load DBIC components (Result + custom ResultSet)
+# from plugin namespaces, and register them immediately if the schema is available
+sub _add_plugin_dbic_components ($self, $app, $instance) {
+
+    return unless $instance->can('share_dir');
+
+    my $share_dir = $instance->share_dir;
+    return unless $share_dir && -d $share_dir;
+
+    # Full plugin name (ex: Mojolicious::Plugin::Fondation::User)
+    my $full_plugin_name = ref $instance;
+
+    # Short name for logs (User, Auth, etc.)
+    my $short_name = $self->_shorten_plugin_name($full_plugin_name);
+
+    my $plugin_schema_ns = "${full_plugin_name}::Schema";
+
+    # Automatic module discovery
+    my @result_modules   = Mojo::Loader::find_modules("${plugin_schema_ns}::Result");
+    my @resultset_modules = Mojo::Loader::find_modules("${plugin_schema_ns}::ResultSet");
+
+    my @all_modules = (@result_modules, @resultset_modules);
+
+    return 0 unless @all_modules;
+
+    #$app->log->debug("$short_name : DBIC modules detected: " . join(', ', @all_modules));
+
+    # Retrieve schema (with clear error message if absent)
+    my $schema;
+    eval { $schema = $app->schema };
+    if ($@ || !$schema) {
+        $app->log->warn(
+            "$short_name : Cannot access schema via \$app->schema. " .
+            "DBIC components will not be registered now. " .
+            "Check that the schema helper exists and the schema is connected."
+        );
+        # We could store for later, but here we choose not to block
+        return 0;
+    }
+
+    my $count_added = 0;
+
+    # ────────────────────────────────────────────────
+    # 1. Registration of Results
+    # ────────────────────────────────────────────────
+    for my $module (@result_modules) {
+        eval "require $module" or do {
+            $app->log->error("$short_name : require Result $module failed : $@");
+            next;
+        };
+
+        # Extract source name: ...::Result::Article → Article
+        my ($source_name) = $module =~ m{::Result::([^:]+)$};
+        next unless $source_name;
+
+        # Retrieve source without unnecessary instantiation
+        my $source = $module->result_source_instance;
+
+        # Registration
+        $schema->register_extra_source($source_name, $source);
+        $app->log->debug("$short_name : Result added " . $self->_shorten_plugin_name($module));
+
+        $count_added++;
+    }
+
+    # ────────────────────────────────────────────────
+    # 2. Registration of custom ResultSets
+    # ────────────────────────────────────────────────
+    for my $module (@resultset_modules) {
+        eval "require $module" or do {
+            $app->log->error("$short_name : require ResultSet $module failed : $@");
+            next;
+        };
+
+        # Extract: ...::ResultSet::Article → Article
+        my ($rs_name) = $module =~ m{::ResultSet::([^:]+)$};
+        next unless $rs_name;
+
+        # Check that source already exists (normally yes, because Result loaded before)
+        if (my $source = $schema->source($rs_name)) {
+            $source->resultset_class($module);
+            $app->log->debug("$short_name : ResultSet added " . $self->_shorten_plugin_name($module));
+            $count_added++;
+        } else {
+            $app->log->warn("$short_name : Cannot attach ResultSet $module → source $rs_name not found");
+        }
+    }
+
+    # Stockage dans le registry (utile pour debug ou futur usage)
+    $self->plugin_registry->{$full_plugin_name}{dbic_components_added} = $count_added;
+
+    return $count_added;
+}
+
+
 
 # Generate a text representation of the plugin dependency tree
 sub dependency_tree ($self) {
