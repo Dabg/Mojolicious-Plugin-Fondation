@@ -10,6 +10,7 @@ use File::Path 'make_path';
 has plugin_registry => sub { {} };
 
 sub register ($self, $app, $conf = {}) {
+    $self->app($app);
 
     # Add helper to access Fondation instance from application
     $app->helper(fondation => sub { $self });
@@ -143,14 +144,17 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
     my $nb_migrations = 0;
     my $nb_fixtures = 0;
     if ( $instance->can('share_dir') && $instance->share_dir ){
+
+
         my $share_dir = $instance->share_dir;
+
         $app->log->debug("Plugin share_dir: " . $share_dir->to_string);
         # Add plugin's template directory to renderer paths
         $template_dir = $self->_add_plugin_templates_path($app, $instance);
 
         # Copy migration files from plugin to application
         $nb_migrations = $self->_copy_plugin_migrations($app, $instance);
-        
+
         # Copy fixture files from plugin to application
         $nb_fixtures = $self->_copy_plugin_fixtures($app, $instance);
 
@@ -325,7 +329,7 @@ sub _copy_plugin_assets ($self, $app, $instance, $type) {
     my $plugin_assets_dir = $share_dir->child($type);
     $app->log->debug("$short_name : checking $type directory: " . $plugin_assets_dir->to_string);
     return unless -d $plugin_assets_dir;
-    
+
     $app->log->debug("$short_name : found $type directory: " . $plugin_assets_dir->to_string);
 
     # Ensure application share directory exists
@@ -339,7 +343,7 @@ sub _copy_plugin_assets ($self, $app, $instance, $type) {
     # Copy files recursively using Mojo::File's list_tree
     my $files_copied = 0;
     my $src_root = Mojo::File->new($plugin_assets_dir);
-    
+
     for my $file ($src_root->list_tree({ hidden => 1 })->each) {
         next unless -f $file;
 
@@ -554,7 +558,7 @@ templates that can be overridden by the application.
 
   # Plugin structure:
   #   share/templates/plugin_name/template.html.ep
-  
+
   # In your plugin code (automatic, no action needed):
   # The template directory is automatically added to renderer paths
 
@@ -568,7 +572,7 @@ models that integrate seamlessly with the application.
   # Plugin structure:
   #   lib/Mojolicious/Plugin/PluginName/Schema/Result/User.pm
   #   lib/Mojolicious/Plugin/PluginName/Schema/ResultSet/User.pm
-  
+
   # In your application:
   my $user = $app->schema->resultset('User')->find(1);
 
@@ -582,7 +586,7 @@ using migration tools like L<DBIx::Migrate::Simple>.
   # Plugin structure:
   #   share/migrations/SQLite/deploy/1/001-auto.sql
   #   share/migrations/_source/deploy/1/001-auto.yml
-  
+
   # Files are copied to application's share/migrations/ directory
   # Existing files are not overwritten (preserves application modifications)
 
@@ -596,7 +600,7 @@ their databases.
   # Plugin structure:
   #   share/fixtures/1/conf/all_tables.json
   #   share/fixtures/1/all_tables/users/1.fix
-  
+
   # Files are copied to application's share/fixtures/ directory
   # Existing files are not overwritten (preserves application data)
 

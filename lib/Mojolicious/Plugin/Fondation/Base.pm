@@ -7,10 +7,12 @@ use File::ShareDir qw(dist_dir);
 
 # Initialize Mojo's "Home"
 has home => sub { Mojo::Home->new };
+has app => sub { die "app not set" };
 
 has share_dir => sub {
     my $self = shift;
     my $class = ref $self;
+
 
     # Transformation: Mojolicious::Plugin::Fondation::User::Admin
     # -> fondation/user/admin
@@ -30,16 +32,17 @@ has share_dir => sub {
 
     # --- 2. LOCAL (share/...) ---
     my $local = $self->home->child('share', $sub_path);
+
     return $local if -d $local;
+
 
     # --- 3. INSTALLED (File::ShareDir) ---
     my @parts = split '::', $class;
-    my $dist_name = join '-', @parts[0..2]; # Ex: Mojolicious-Plugin-Fondation
-
+    my $dist_name = 'Mojolicious-Plugin-Fondation-' . $parts[-1];
     my $dist_path = eval { Mojo::File->new(dist_dir($dist_name)) };
+
     if ($dist_path) {
-        my $final = $dist_path->child($sub_path);
-        return $final if -d $final;
+        return $dist_path if -d $dist_path;
     }
 
     return $local;
