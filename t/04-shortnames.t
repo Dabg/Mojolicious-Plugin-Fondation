@@ -13,6 +13,9 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
 
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
+
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
 
@@ -24,7 +27,8 @@ use_ok 'Mojolicious::Plugin::Fondation';
     # Write config with short names
     write_config_short($conf_file);
     
-    my $t = Test::Mojo->new('Mojolicious');
+    my $app = create_test_app($tempdir);
+    my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
     
     # Load Fondation with short names in direct config
@@ -65,7 +69,8 @@ use_ok 'Mojolicious::Plugin::Fondation';
     # Write config with short names in global config
     write_config_short_global($conf_file);
     
-    my $t = Test::Mojo->new('Mojolicious');
+    my $app = create_test_app($tempdir);
+    my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
     
     # Load Fondation without direct config (should use global)
@@ -91,7 +96,8 @@ use_ok 'Mojolicious::Plugin::Fondation';
     # Write config with mixed names
     write_config_mixed($conf_file);
     
-    my $t = Test::Mojo->new('Mojolicious');
+    my $app = create_test_app($tempdir);
+    my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
     
     # Load Fondation with mixed names
@@ -120,7 +126,8 @@ use_ok 'Mojolicious::Plugin::Fondation';
     # Write config that references Config plugin
     write_config_with_config($conf_file);
     
-    my $t = Test::Mojo->new('Mojolicious');
+    my $app = create_test_app($tempdir);
+    my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
     
     # Load Fondation with Config as a dependency (short name)
@@ -143,7 +150,8 @@ use_ok 'Mojolicious::Plugin::Fondation';
     # Write config with both short and long names for same plugin
     write_config_both_names($conf_file);
     
-    my $t = Test::Mojo->new('Mojolicious');
+    my $app = create_test_app($tempdir);
+    my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
     
     # Load Fondation

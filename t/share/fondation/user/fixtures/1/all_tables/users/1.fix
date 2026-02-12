@@ -1,0 +1,12 @@
+$HASH1 = {
+           active   => 1,
+           created_at
+                    => '2026-02-03T13:58:04',
+           email    => 'admin@example.com',
+           id       => 1,
+           password
+                    => 'hash_admin_123',
+           updated_at
+                    => '2026-02-03T13:58:04',
+           username => 'admin'
+         };

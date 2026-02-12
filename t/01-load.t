@@ -12,6 +12,9 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
 
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
+
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
 
@@ -22,8 +25,9 @@ my $conf_file = File::Spec->catfile($tempdir, 'test.conf');
 # Write test configuration with dependencies
 write_config($conf_file);
 
-# Create a test Mojolicious app
-my $t = Test::Mojo->new('Mojolicious');
+# Create a test Mojolicious app with temporary home directory
+my $app = create_test_app($tempdir);
+my $t = Test::Mojo->new($app);
 
 # Load Config plugin with our config file
 $t->app->plugin('Config' => {file => $conf_file});

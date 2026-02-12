@@ -6,9 +6,13 @@ use File::Temp 'tempdir';
 use File::Spec;
 use FindBin;
 
+
 # Add lib directories to @INC so plugins can be found
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
+
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
 
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
@@ -16,21 +20,22 @@ use_ok 'Mojolicious::Plugin::Fondation';
 # Set HARNESS_ACTIVE to simulate test environment (needed for share_dir)
 local $ENV{HARNESS_ACTIVE} = 1;
 
-# Create a test Mojolicious app
-my $t = Test::Mojo->new('Mojolicious');
-
-# Enable debug logging to see what's happening
-$t->app->log->level('debug');
-
-# Use the existing MySchema from t/lib/MySchema.pm
-# It already has load_namespaces, but that's OK - Fondation will register extra sources
-
 # Create a temporary directory for config file
 my $tempdir = tempdir(CLEANUP => 1);
 my $conf_file = File::Spec->catfile($tempdir, 'test.conf');
 
 # Write test configuration with User plugin (which has DBIC components)
 write_config($conf_file);
+
+# Create a test Mojolicious app with temporary home directory
+my $app = create_test_app($tempdir);
+my $t = Test::Mojo->new($app);
+
+# Enable debug logging to see what's happening
+$t->app->log->level('debug');
+
+# Use the existing MySchema from t/lib/MySchema.pm
+# It already has load_namespaces, but that's OK - Fondation will register extra sources
 
 # Load Config plugin with our config file
 $t->app->plugin('Config' => {file => $conf_file});
@@ -79,17 +84,17 @@ if ($user_source) {
     diag "ResultSet class: $rs_class";
     is($rs_class, 'Mojolicious::Plugin::Fondation::User::Schema::ResultSet::User',
         'ResultSet class correctly set');
-    
+
     # Test that we can create a resultset
     my $rs = $schema->resultset('User');
     ok($rs, 'Can create resultset for User');
     isa_ok($rs, 'DBIx::Class::ResultSet');
-    
+
     # Test ResultSet custom methods
     if ($rs->can('active')) {
         ok(1, 'ResultSet has active method');
     }
-    
+
     # Check Result class
     my $result_class = $user_source->result_class;
     diag "Result class: $result_class";
@@ -101,7 +106,7 @@ if ($user_source) {
 eval {
     # Deploy the schema (create tables in memory)
     $schema->deploy();
-    
+
     # Create a test user
     my $user_rs = $schema->resultset('User');
     my $user = $user_rs->create({
@@ -112,24 +117,24 @@ eval {
         updated_at => \'datetime("now")',
         active     => 1,
     });
-    
+
     ok($user, 'User created successfully');
     is($user->username, 'testuser', 'Username matches');
     is($user->email, 'test@example.com', 'Email matches');
     is($user->active, 1, 'Active flag is 1');
-    
+
     # Search for the user
     my $found_user = $user_rs->find({ username => 'testuser' });
     ok($found_user, 'Found user by username');
     is($found_user->id, $user->id, 'User IDs match');
-    
+
     # Test custom ResultSet method (if available)
     if ($user_rs->can('active')) {
         my $active_rs = $user_rs->active;
         ok($active_rs, 'Can get active resultset');
         is($active_rs->count, 1, 'One active user');
     }
-    
+
     1;
 } or diag "Database operations skipped or failed: $@";
 

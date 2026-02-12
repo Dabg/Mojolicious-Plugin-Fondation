@@ -17,6 +17,9 @@ use feature 'signatures';
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
 
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
+
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
 
@@ -24,8 +27,9 @@ use_ok 'Mojolicious::Plugin::Fondation';
 local $ENV{HARNESS_ACTIVE} = 1;
 
 subtest 'Plugin with share/templates directory' => sub {
-    # Create a fresh app for this subtest
-    my $app = Mojolicious::Lite->new;
+    # Create a fresh app for this subtest with temporary home
+    my $tempdir = tempdir(CLEANUP => 1);
+    my $app = create_test_app($tempdir);
 
     # Load Fondation with User plugin
     my $fondation = $app->plugin('Fondation' => {
@@ -42,8 +46,8 @@ subtest 'Plugin with share/templates directory' => sub {
 
     my $user_entry = $registry->{'Mojolicious::Plugin::Fondation::User'};
     my $user_instance = $user_entry->{instance};
-    my $share_dir = $user_instance->share_dir;
-    my $template_dir = $share_dir->child('templates');
+    my $plugin_share_dir = $user_instance->share_dir;
+    my $template_dir = $plugin_share_dir->child('templates');
 
     # Check that templates subdirectory exists
     ok(-d $template_dir, "Template directory exists at $template_dir");

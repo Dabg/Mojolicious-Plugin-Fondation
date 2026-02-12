@@ -19,6 +19,9 @@ has share_dir => sub {
     $sub_path =~ s{::}{/}g;
 
     # --- 1. TEST (t/share/...) ---
+    # When running tests (HARNESS_ACTIVE) or when USE_SHARE_DIR_TEST=1 is set,
+    # look for share directory under t/share/... first.
+    # This is useful for development and testing with local share files.
     if ($ENV{HARNESS_ACTIVE} || $ENV{USE_SHARE_DIR_TEST}) {
         # mojo_home->child('t', 'share', ...)
         my $path = $self->home->child('t', 'share', $sub_path);

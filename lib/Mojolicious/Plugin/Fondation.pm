@@ -3,6 +3,8 @@ package Mojolicious::Plugin::Fondation;
 # ABSTRACT: Hierarchical plugin loader with configuration priority
 
 use Mojo::Base 'Mojolicious::Plugin::Fondation::Base', -signatures;
+use File::Copy;
+use File::Path 'make_path';
 
 # Registry of loaded plugins: plugin_name => { requires => [], instance => $plugin_obj }
 has plugin_registry => sub { {} };
@@ -138,10 +140,19 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
 
     my $template_dir;
     my $nb_dbic = 0;
+    my $nb_migrations = 0;
+    my $nb_fixtures = 0;
     if ( $instance->can('share_dir') && $instance->share_dir ){
+        my $share_dir = $instance->share_dir;
+        $app->log->debug("Plugin share_dir: " . $share_dir->to_string);
         # Add plugin's template directory to renderer paths
         $template_dir = $self->_add_plugin_templates_path($app, $instance);
 
+        # Copy migration files from plugin to application
+        $nb_migrations = $self->_copy_plugin_migrations($app, $instance);
+        
+        # Copy fixture files from plugin to application
+        $nb_fixtures = $self->_copy_plugin_fixtures($app, $instance);
 
         # load DBIC components
         $nb_dbic = $self->_add_plugin_dbic_components($app, $instance);
@@ -179,6 +190,8 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
         instance  => $instance,
         template_dir => $template_dir,
         dbic_components_added => $nb_dbic,
+        migrations_copied => $nb_migrations,
+        fixtures_copied => $nb_fixtures,
     };
 
     return $instance;
@@ -297,7 +310,80 @@ sub _add_plugin_dbic_components ($self, $app, $instance) {
     return $count_added;
 }
 
+# Copy plugin assets (migrations or fixtures) to application share directory
+# Recursively copies files from plugin's share/$type to app's share/$type
+sub _copy_plugin_assets ($self, $app, $instance, $type) {
+    # Only plugins that inherit from Fondation::Base have share_dir method
+    return unless $instance->can('share_dir');
 
+    my $share_dir = $instance->share_dir;
+    return unless $share_dir && -d $share_dir;
+
+    # Get short plugin name for logging
+    my $short_name = $self->_shorten_plugin_name(ref $instance);
+
+    my $plugin_assets_dir = $share_dir->child($type);
+    $app->log->debug("$short_name : checking $type directory: " . $plugin_assets_dir->to_string);
+    return unless -d $plugin_assets_dir;
+    
+    $app->log->debug("$short_name : found $type directory: " . $plugin_assets_dir->to_string);
+
+    # Ensure application share directory exists
+    my $app_share_dir = $app->home->child('share');
+    $app_share_dir->make_path unless -d $app_share_dir;
+
+    # Target directory in application
+    my $target_dir = $app_share_dir->child($type);
+    $target_dir->make_path unless -d $target_dir;
+
+    # Copy files recursively using Mojo::File's list_tree
+    my $files_copied = 0;
+    my $src_root = Mojo::File->new($plugin_assets_dir);
+    
+    for my $file ($src_root->list_tree({ hidden => 1 })->each) {
+        next unless -f $file;
+
+        # Calculate relative path from plugin assets directory using to_rel
+        my $rel_path = $file->to_rel($src_root);
+
+        # Target file path
+        my $target_file = $target_dir->child($rel_path);
+
+        # Create parent directory if needed
+        $target_file->dirname->make_path unless -d $target_file->dirname;
+
+        # Copy file if it doesn't exist or is newer
+        if (!-e $target_file || (-M $file < -M $target_file)) {
+            eval {
+                $file->copy_to($target_file);
+                $files_copied++;
+                $app->log->debug("$short_name : $type file copied: $rel_path");
+            };
+            if ($@) {
+                $app->log->error("$short_name : Failed to copy $type file $rel_path: $@");
+                next;
+            }
+        } else {
+            $app->log->debug("$short_name : $type file already exists: $rel_path");
+        }
+    }
+
+    if ($files_copied) {
+        $app->log->debug("$short_name : $files_copied $type files copied to application");
+    }
+
+    return $files_copied;
+}
+
+# Copy migration files from plugin to application
+sub _copy_plugin_migrations ($self, $app, $instance) {
+    return $self->_copy_plugin_assets($app, $instance, 'migrations');
+}
+
+# Copy fixture files from plugin to application
+sub _copy_plugin_fixtures ($self, $app, $instance) {
+    return $self->_copy_plugin_assets($app, $instance, 'fixtures');
+}
 
 # Generate a text representation of the plugin dependency tree
 sub dependency_tree ($self) {
@@ -454,9 +540,89 @@ Each dependency in the C<dependencies> array can be either a plugin name (string
 or a hash reference with the plugin name as key and its configuration as value.
 This allows passing specific configuration to child plugins.
 
+=head1 AUTOMATIC PLUGIN ASSET HANDLING
+
+Plugins that inherit from L<Mojolicious::Plugin::Fondation::Base> automatically gain
+several asset management features through the C<share_dir> method. Fondation
+automatically handles these assets when loading plugins:
+
+=head2 Templates
+
+If a plugin has a C<share/templates/> directory, Fondation automatically adds it
+to the application's template search paths. This allows plugins to provide default
+templates that can be overridden by the application.
+
+  # Plugin structure:
+  #   share/templates/plugin_name/template.html.ep
+  
+  # In your plugin code (automatic, no action needed):
+  # The template directory is automatically added to renderer paths
+
+=head2 Database Components (DBIC)
+
+If a plugin has DBIC components (C<::Schema::Result::*> and C<::Schema::ResultSet::*> classes),
+Fondation automatically loads and registers them with the application's schema
+(when available via C<$app-E<gt>schema>). This allows plugins to provide database
+models that integrate seamlessly with the application.
+
+  # Plugin structure:
+  #   lib/Mojolicious/Plugin/PluginName/Schema/Result/User.pm
+  #   lib/Mojolicious/Plugin/PluginName/Schema/ResultSet/User.pm
+  
+  # In your application:
+  my $user = $app->schema->resultset('User')->find(1);
+
+=head2 Migrations
+
+If a plugin has a C<share/migrations/> directory, Fondation automatically copies
+the migration files to the application's C<share/migrations/> directory. This
+allows plugins to provide database schema migrations that applications can apply
+using migration tools like L<DBIx::Migrate::Simple>.
+
+  # Plugin structure:
+  #   share/migrations/SQLite/deploy/1/001-auto.sql
+  #   share/migrations/_source/deploy/1/001-auto.yml
+  
+  # Files are copied to application's share/migrations/ directory
+  # Existing files are not overwritten (preserves application modifications)
+
+=head2 Fixtures
+
+If a plugin has a C<share/fixtures/> directory, Fondation automatically copies
+the fixture files to the application's C<share/fixtures/> directory. This allows
+plugins to provide initial data or test data that applications can load into
+their databases.
+
+  # Plugin structure:
+  #   share/fixtures/1/conf/all_tables.json
+  #   share/fixtures/1/all_tables/users/1.fix
+  
+  # Files are copied to application's share/fixtures/ directory
+  # Existing files are not overwritten (preserves application data)
+
+=head2 Requirements
+
+For these automatic features to work:
+
+=over 4
+
+=item * The plugin must inherit from L<Mojolicious::Plugin::Fondation::Base>
+
+=item * The application must have a writable C<share/> directory in its home directory
+
+=item * For DBIC components, the application must have a schema available via C<$app-E<gt>schema>
+
+=item * For testing, set C<USE_SHARE_DIR_TEST=1> to use test share directories under C<t/share/>
+
+=back
+
+All asset copying operations are idempotent: files are only copied if they don't
+exist or if the plugin's version is newer (based on file modification time).
+
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Plugins>, L<Mojolicious::Plugin::Config>
+L<Mojolicious>, L<Mojolicious::Plugins>, L<Mojolicious::Plugin::Config>,
+L<Mojolicious::Plugin::Fondation::Base>
 
 =head1 AUTHOR
 

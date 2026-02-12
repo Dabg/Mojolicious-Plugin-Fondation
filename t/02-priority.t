@@ -12,8 +12,14 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
 
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
+
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
+
+# Set HARNESS_ACTIVE to use test share directories
+local $ENV{HARNESS_ACTIVE} = 1;
 
 # Create a temporary directory for config file
 my $tempdir = tempdir(CLEANUP => 1);
@@ -22,8 +28,9 @@ my $conf_file = File::Spec->catfile($tempdir, 'test.conf');
 # Write test configuration with some dependencies
 write_config($conf_file);
 
-# Create a test Mojolicious app
-my $t = Test::Mojo->new('Mojolicious');
+# Create a test Mojolicious app with temporary home directory
+my $app = create_test_app($tempdir);
+my $t = Test::Mojo->new($app);
 
 # Load Config plugin with our config file (global config)
 $t->app->plugin('Config' => {file => $conf_file});
@@ -71,7 +78,9 @@ ok(!exists $registry->{'Mojolicious::Plugin::Fondation::Permission'},
 
 # Test 2: Plugin-specific configuration priority
 # Create another app to test plugin-specific config merging
-my $t2 = Test::Mojo->new('Mojolicious');
+my $tempdir2 = tempdir(CLEANUP => 1);
+my $app2 = create_test_app($tempdir2);
+my $t2 = Test::Mojo->new($app2);
 
 # Load Config plugin with config that has plugin-specific settings
 $t2->app->plugin('Config' => {file => $conf_file});
@@ -98,7 +107,9 @@ ok(exists $registry2->{'Mojolicious::Plugin::Fondation::User'}, 'User plugin reg
 
 # Test 3: Direct config for dependency plugin (Authorization) should override global
 # Create another app
-my $t3 = Test::Mojo->new('Mojolicious');
+my $tempdir3 = tempdir(CLEANUP => 1);
+my $app3 = create_test_app($tempdir3);
+my $t3 = Test::Mojo->new($app3);
 
 # Load Config plugin
 $t3->app->plugin('Config' => {file => $conf_file});
@@ -152,7 +163,8 @@ ok(!exists $registry3->{'Mojolicious::Plugin::Fondation::Permission'},
         my $conf_file = File::Spec->catfile($tempdir, 'test_hierarchy.conf');
         $write_config->($conf_file, '{}');  # empty config
 
-        my $tA = Test::Mojo->new('Mojolicious');
+        my $appA = create_test_app($tempdir);
+        my $tA = Test::Mojo->new($appA);
         $tA->app->plugin('Config' => {file => $conf_file});
         $tA->app->plugin('Fondation' => {
             dependencies => [
@@ -180,7 +192,8 @@ ok(!exists $registry3->{'Mojolicious::Plugin::Fondation::Permission'},
 }
 CONFIG
 
-        my $tB = Test::Mojo->new('Mojolicious');
+        my $appB = create_test_app($tempdir);
+        my $tB = Test::Mojo->new($appB);
         $tB->app->plugin('Config' => {file => $conf_file});
         $tB->app->plugin('Fondation');  # no direct config
         is($tB->app->config->{fondation_user_config}, 'global_config',
@@ -201,7 +214,8 @@ CONFIG
 }
 CONFIG
 
-        my $tC = Test::Mojo->new('Mojolicious');
+        my $appC = create_test_app($tempdir);
+        my $tC = Test::Mojo->new($appC);
         $tC->app->plugin('Config' => {file => $conf_file});
         $tC->app->plugin('Fondation');  # no direct config
         is($tC->app->config->{fondation_user_config}, 'plugin_default',

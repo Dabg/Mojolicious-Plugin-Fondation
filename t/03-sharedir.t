@@ -14,6 +14,9 @@ use File::Path 'make_path';
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
 
+# Use test helper for creating apps with temporary home
+use TestHelper qw(create_test_app);
+
 # Load the Fondation plugin
 use_ok 'Mojolicious::Plugin::Fondation';
 
@@ -27,8 +30,9 @@ my $conf_file = File::Spec->catfile($tempdir, 'test.conf');
 # Write minimal configuration
 write_config($conf_file);
 
-# Create a test Mojolicious app
-my $t = Test::Mojo->new('Mojolicious');
+# Create a test Mojolicious app with temporary home directory
+my $app = create_test_app($tempdir);
+my $t = Test::Mojo->new($app);
 
 # Create template directory for User plugin to test share_dir functionality
 my $user_template_dir = Mojo::File->new('t', 'share', 'fondation', 'user', 'templates');
