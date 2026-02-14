@@ -8,9 +8,23 @@ use File::Path 'make_path';
 
 # Registry of loaded plugins: plugin_name => { requires => [], instance => $plugin_obj }
 has plugin_registry => sub { {} };
+has fixture_sets => sub { [] };
 
 sub register ($self, $app, $conf = {}) {
     $self->app($app);
+
+
+    # Detect if we're running a database migration command
+    # When running 'myapp.pl db prepare' or 'myapp.pl db populate', etc.
+    # we should NOT copy plugin assets (migrations/fixtures) because
+    # DBIx::Class::Migration will handle them
+    $app->log->debug("Fondation: Checking main::ARGV: " . (defined $main::ARGV[0] ? $main::ARGV[0] : 'undef'));
+    if (defined $main::ARGV[0] && $main::ARGV[0] eq 'db') {
+        $self->is_db_migration(1);
+        $app->log->debug("Fondation: Database migration command detected, skipping asset copy");
+    } else {
+        $app->log->debug("Fondation: Not a database migration command, is_db_migration will be false");
+    }
 
     # Add helper to access Fondation instance from application
     $app->helper(fondation => sub { $self });
@@ -23,6 +37,14 @@ sub register ($self, $app, $conf = {}) {
     $self->_load_plugin($app, __PACKAGE__, $conf);
 
     return $self;
+}
+
+sub is_db_migration {
+    my ($self, $value) = @_;
+    if (@_ == 2) {
+        $self->{is_db_migration} = $value;
+    }
+    return $self->{is_db_migration};
 }
 
 # Convert short plugin name to full Mojolicious plugin name
@@ -152,11 +174,16 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
         # Add plugin's template directory to renderer paths
         $template_dir = $self->_add_plugin_templates_path($app, $instance);
 
-        # Copy migration files from plugin to application
-        $nb_migrations = $self->_copy_plugin_migrations($app, $instance);
+        $self->_detect_plugin_fixture_sets($app, $instance);
 
-        # Copy fixture files from plugin to application
-        $nb_fixtures = $self->_copy_plugin_fixtures($app, $instance);
+        if ( ! $self->is_db_migration) {
+
+            # Copy migration files from plugin to application
+            $nb_migrations = $self->_copy_plugin_migrations($app, $instance);
+
+            # Copy fixture files from plugin to application
+            $nb_fixtures = $self->_copy_plugin_fixtures($app, $instance);
+        }
 
         # load DBIC components
         $nb_dbic = $self->_add_plugin_dbic_components($app, $instance);
@@ -387,6 +414,43 @@ sub _copy_plugin_migrations ($self, $app, $instance) {
 # Copy fixture files from plugin to application
 sub _copy_plugin_fixtures ($self, $app, $instance) {
     return $self->_copy_plugin_assets($app, $instance, 'fixtures');
+}
+
+# Detect fixture sets provided by a plugin (from its original share_dir)
+sub _detect_plugin_fixture_sets ($self, $app, $instance) {
+    return unless $instance->can('share_dir');
+
+    my $share_dir = $instance->share_dir;
+    return unless $share_dir && -d $share_dir;
+
+    my $fixtures_dir = $share_dir->child('fixtures');
+    return unless -d $fixtures_dir;
+
+    my $short_name = $self->_shorten_plugin_name(ref $instance);
+    my @sets;
+
+    # Browse version directories (e.g., 1, 2...)
+    for my $ver_dir ($fixtures_dir->list({dir => 1})->each) {
+        next unless -d $ver_dir && $ver_dir->basename =~ /^\d+$/;
+
+        my $conf_dir = $ver_dir->child('conf');
+        next unless -d $conf_dir;
+
+        for my $json ($conf_dir->list({file => 1})->each) {
+            next unless $json->basename =~ /\.json$/i;
+            my ($set_name) = $json->basename =~ /^(.+)\.json$/i;
+            next unless $set_name;
+            push @sets, $set_name;
+        }
+    }
+
+    if (@sets) {
+        $app->log->debug("$short_name : fixture sets detected → " . join(', ', @sets));
+        push @{ $self->fixture_sets }, @sets;
+        $self->plugin_registry->{ref $instance}{fixture_sets} = \@sets;
+    }
+
+    return scalar @sets;
 }
 
 # Generate a text representation of the plugin dependency tree

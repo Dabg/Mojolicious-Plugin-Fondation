@@ -268,6 +268,23 @@ foreach my $plugin_name (keys %$registry) {
 }
 ```
 
+## Automatic Plugin Asset Handling
+
+Plugins that inherit from `Mojolicious::Plugin::Fondation::Base` automatically gain several asset management features through the `share_dir` method. Fondation automatically handles these assets when loading plugins:
+
+### Templates
+If a plugin has a `share/templates/` directory, Fondation automatically adds it to the application's template search paths. This allows plugins to provide default templates that can be overridden by the application.
+
+### Database Components (DBIC)
+If a plugin has DBIC components (`::Schema::Result::*` and `::Schema::ResultSet::*` classes), Fondation automatically loads and registers them with the application's schema (when available via `$app->schema`). This allows plugins to provide database models that integrate seamlessly with the application.
+
+### Migrations
+If a plugin has a `share/migrations/` directory, Fondation automatically copies the migration files to the application's `share/migrations/` directory. This allows plugins to provide database schema migrations that applications can apply using migration tools.
+
+### Fixtures
+If a plugin has a `share/fixtures/` directory, Fondation automatically copies the fixture files to the application's `share/fixtures/` directory. This allows plugins to provide initial data or test data that applications can load into their databases.
+
+All asset copying operations are idempotent: files are only copied if they don't exist or if the plugin's version is newer (based on file modification time).
 
 ## License
 
