@@ -9,6 +9,8 @@ use File::Path 'make_path';
 # Registry of loaded plugins: plugin_name => { requires => [], instance => $plugin_obj }
 has plugin_registry => sub { {} };
 has fixture_sets => sub { [] };
+# Counter for plugin execution order
+has plugin_counter => sub { 0 };
 
 sub register ($self, $app, $conf = {}) {
     $self->app($app);
@@ -196,7 +198,6 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
     my $dependencies = $self->_get_dependencies($app, $merged_conf, $instance);
 
     # First, load all dependencies (children)
-    my @dependency_instances;
     foreach my $dep (@$dependencies) {
         # Dependency can be a string (plugin name) or hash { plugin_name => config }
         my ($dep_name, $dep_conf);
@@ -209,16 +210,19 @@ sub _load_plugin ($self, $app, $plugin_name, $plugin_conf = {}) {
             $dep_conf = {};
         }
 
-        my $dep_instance = $self->_load_plugin($app, $dep_name, $dep_conf);
-        push @dependency_instances, $dep_instance;
+        $self->_load_plugin($app, $dep_name, $dep_conf);
     }
 
 
     # Register the plugin in our registry using its actual class name (from ref)
     # This will be the full normalized name
+    my $order = $self->plugin_counter + 1;
+    $self->plugin_counter($order);
+
     $self->plugin_registry->{ref($instance)} = {
         requires  => $dependencies,
         instance  => $instance,
+        execution_order => $order,
         template_dir => $template_dir,
         dbic_components_added => $nb_dbic,
         migrations_copied => $nb_migrations,
