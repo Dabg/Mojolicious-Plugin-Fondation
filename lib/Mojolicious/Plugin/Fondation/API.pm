@@ -1,0 +1,38 @@
+package Mojolicious::Plugin::Fondation::API;
+
+# ABSTRACT: Stable public contract for Fondation plugins — read-only access
+
+use Mojo::Base -base, -signatures;
+
+has 'registry';
+
+# ---------------------------------------------------------------------------
+# plugin($name) — returns a specific plugin's merged config hashref
+#
+# $name can be a short name ('Fondation::User') or a long name
+# ('Mojolicious::Plugin::Fondation::User').
+# Returns undef if the plugin is not in the registry.
+# ---------------------------------------------------------------------------
+sub plugin ($self, $name) {
+    my $long = $self->_resolve_long($name);
+    my $entry = $self->registry->{$long};
+    return unless $entry;
+    return $entry->{config};
+}
+
+# ---------------------------------------------------------------------------
+# config($name) — alias for plugin(), returns merged config
+# ---------------------------------------------------------------------------
+sub config ($self, $name) {
+    return $self->plugin($name);
+}
+
+# ---------------------------------------------------------------------------
+# _resolve_long — normalizes a name to its long form
+# ---------------------------------------------------------------------------
+sub _resolve_long ($self, $name) {
+    require Mojolicious::Plugin::Fondation::Utils;
+    return Mojolicious::Plugin::Fondation::Utils::long_name($name);
+}
+
+1;

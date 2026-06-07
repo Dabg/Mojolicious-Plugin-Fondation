@@ -1,0 +1,8 @@
+Revision history for Mojolicious-Plugin-Fondation
+
+{{$NEXT}}
+
+0.01  2026-06-07
+    - Initial release
+    - Hierarchical plugin loading
+    - Configuration priority: direct > application > default
