@@ -1,6 +1,6 @@
 package Mojolicious::Plugin::Fondation;
 
-# ABSTRACT: Hierarchical plugin loader with configuration priority
+# ABSTRACT: Hierarchical plugin loader with configuration priority and resource sharing
 
 use Mojo::Base 'Mojolicious::Plugin', -signatures;
 use Mojolicious::Plugin::Fondation::Resolver;

@@ -20,8 +20,12 @@ use base 'Exporter';
 
 # Create a bare Mojolicious app with a temporary home directory.
 # The app's share/ directory is created to avoid permission errors.
+#
+# Options (optional hashref, second argument):
+#   log_level => 'debug'   # default: 'fatal' (silent during tests)
 sub create_test_app {
-    my ($temp_dir) = @_;
+    my ($temp_dir, $opts) = @_;
+    $opts //= {};
 
     if (!$temp_dir) {
         $temp_dir = tempdir(CLEANUP => 1);
@@ -36,16 +40,18 @@ sub create_test_app {
     my $share_dir = $app->home->child('share');
     make_path($share_dir) unless -d $share_dir;
 
+    $app->log->level($opts->{log_level} // 'fatal');
+
     return $app;
 }
 
 # Create a Fondation app with the given config loaded.
 # Equivalent to: create_test_app + $app->plugin('Fondation' => $config)
 sub create_fondation_app {
-    my ($temp_dir, $config) = @_;
+    my ($temp_dir, $config, $opts) = @_;
     $config //= {};
 
-    my $app = create_test_app($temp_dir);
+    my $app = create_test_app($temp_dir, $opts);
     $app->plugin('Fondation' => $config);
     return $app;
 }
