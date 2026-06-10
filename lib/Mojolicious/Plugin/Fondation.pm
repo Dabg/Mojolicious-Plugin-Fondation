@@ -29,6 +29,10 @@ sub register ($self, $app, $config = {}) {
     # ── Register all helpers (fallbacks + real) BEFORE plugin discovery ──
     Mojolicious::Plugin::Fondation::Helpers->register($app, $manager);
 
+    # ── Register command namespace ──
+    push @{$app->commands->namespaces},
+        'Mojolicious::Plugin::Fondation::Command';
+
     # ── Resolve the full dependency graph (with cycle detection) ──
     my $resolver = Mojolicious::Plugin::Fondation::Resolver->new(app => $app);
     my $sorted   = $resolver->resolve('Fondation', $merged_config);
