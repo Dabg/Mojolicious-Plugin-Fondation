@@ -47,7 +47,7 @@ subtest 'Plugin without fondation_finalyze is skipped silently' => sub {
     my $tempdir = tempdir(CLEANUP => 1);
     my $app = create_test_app($tempdir);
 
-    # Permission has NO fondation_finalyze — should not error
+    # Permission has NO fondation_finalyze -- should not error
     $app->plugin('Fondation' => {
         dependencies => ['Fondation::Permission']
     });

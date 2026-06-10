@@ -37,7 +37,7 @@ sub _build_app {
 # No dependencies
 # ═══════════════════════════════════════════════════════════════════════════
 
-subtest 'No dependencies — single plugin' => sub {
+subtest 'No dependencies -- single plugin' => sub {
     my $app      = _build_app();
     my $resolver = Mojolicious::Plugin::Fondation::Resolver->new(app => $app);
     my $sorted   = $resolver->resolve('Fondation::Resolver::Leaf');
@@ -53,7 +53,7 @@ subtest 'No dependencies — single plugin' => sub {
 # Linear chain: Root → Mid → Leaf
 # ═══════════════════════════════════════════════════════════════════════════
 
-subtest 'Linear chain — deps before dependant' => sub {
+subtest 'Linear chain -- deps before dependant' => sub {
     my $app      = _build_app();
     my $resolver = Mojolicious::Plugin::Fondation::Resolver->new(app => $app);
     my $sorted   = $resolver->resolve('Fondation::Resolver::Root');
@@ -123,7 +123,7 @@ subtest 'Self-referential dependency detected' => sub {
 # ═══════════════════════════════════════════════════════════════════════════
 
 subtest 'Duplicate dependencies deduplicated' => sub {
-    # We can test this by resolving a plugin twice — second call should use
+    # We can test this by resolving a plugin twice -- second call should use
     # the previously resolved state and return the same result.
     my $app      = _build_app();
     my $resolver = Mojolicious::Plugin::Fondation::Resolver->new(app => $app);
@@ -140,7 +140,7 @@ subtest 'Duplicate dependencies deduplicated' => sub {
 # Config merge priority: direct > app config > plugin defaults
 # ═══════════════════════════════════════════════════════════════════════════
 
-subtest 'Config merge — direct overrides app config overrides defaults' => sub {
+subtest 'Config merge -- direct overrides app config overrides defaults' => sub {
     my $app = _build_app();
 
     # Set app-level config for Leaf
@@ -171,7 +171,7 @@ subtest 'Config merge — direct overrides app config overrides defaults' => sub
 # DiamondLeft → DiamondBase, DiamondRight → DiamondBase.
 # DiamondBase should appear only once and before everything else.
 
-# For now, skip diamond test — it requires creating 4 more plugins.
+# For now, skip diamond test -- it requires creating 4 more plugins.
 # The important thing is that duplicate resolution works (tested above).
 
 done_testing();

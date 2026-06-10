@@ -10,7 +10,7 @@ has 'states' => sub { {} };   # $long_name => 'visiting' | 'visited'
 has 'result' => sub { [] };    # topologically sorted specs
 
 # ---------------------------------------------------------------------------
-# resolve — entry point
+# resolve -- entry point
 #
 # Returns an arrayref of plugin specs in topological order (deps first).
 # Each spec: { long => $long, short => $short, config => $merged, meta => $meta }
@@ -30,12 +30,12 @@ sub resolve ($self, $name_or_short, $direct_conf = {}) {
 }
 
 # ---------------------------------------------------------------------------
-# _visit — DFS traversal with 3-state cycle detection
+# _visit -- DFS traversal with 3-state cycle detection
 #
 # State machine:
-#   undef     → unvisited, recurse
-#   'visiting' → currently in DFS path → CYCLE DETECTED
-#   'visited'  → already resolved, skip
+#   undef     -> unvisited, recurse
+#   'visiting' -> currently in DFS path -> CYCLE DETECTED
+#   'visited'  -> already resolved, skip
 #
 # On cycle: dies with a message naming the plugin causing the cycle.
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ sub _visit ($self, $long, $direct_conf) {
 
     return if defined $state && $state eq 'visited';
 
-    # Mark as visiting — if we encounter it again during this DFS, it's a cycle
+    # Mark as visiting -- if we encounter it again during this DFS, it's a cycle
     $self->states->{$long} = 'visiting';
 
     my $meta    = $self->_discover_meta($long);
@@ -89,7 +89,7 @@ sub _visit ($self, $long, $direct_conf) {
 }
 
 # ---------------------------------------------------------------------------
-# _discover_meta — load fondation_meta from a plugin class without
+# _discover_meta -- load fondation_meta from a plugin class without
 # instantiating it (i.e. without calling register).
 # ---------------------------------------------------------------------------
 sub _discover_meta ($self, $long_name) {
@@ -105,7 +105,7 @@ sub _discover_meta ($self, $long_name) {
 
     my $err = Mojo::Loader::load_class($class);
     if ($err) {
-        $self->app->log->warn("Resolver: could not load $class — $err");
+        $self->app->log->warn("Resolver: could not load $class -- $err");
         return { dependencies => [], defaults => {} };
     }
 

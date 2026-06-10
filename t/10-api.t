@@ -41,7 +41,7 @@ subtest 'API wraps manager and exposes registry' => sub {
 };
 
 # ═══════════════════════════════════════════════════════════════════════════
-# plugin($name) — get a specific entry's config
+# plugin($name) -- get a specific entry's config
 # ═══════════════════════════════════════════════════════════════════════════
 
 subtest 'plugin() returns entry config' => sub {
@@ -68,7 +68,7 @@ subtest 'plugin() returns entry config' => sub {
 };
 
 # ═══════════════════════════════════════════════════════════════════════════
-# config($name) — get merged config (alias for plugin())
+# config($name) -- get merged config (alias for plugin())
 # ═══════════════════════════════════════════════════════════════════════════
 
 subtest 'config() returns merged config' => sub {

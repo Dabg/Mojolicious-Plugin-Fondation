@@ -9,7 +9,7 @@ use lib "$FindBin::Bin/../lib";
 use Mojolicious::Plugin::Fondation::Utils qw(merge);
 
 # =========================================================================
-# Scalar merge — highest priority wins (direct > app_conf > defaults)
+# Scalar merge -- highest priority wins (direct > app_conf > defaults)
 # =========================================================================
 
 subtest 'Scalars: direct overrides app_conf overrides defaults' => sub {
@@ -40,7 +40,7 @@ subtest 'Scalars: defaults used when no direct or app_conf' => sub {
 };
 
 # =========================================================================
-# Hash merge — recursive, priority on conflicting keys
+# Hash merge -- recursive, priority on conflicting keys
 # =========================================================================
 
 subtest 'Hashes: merged recursively' => sub {
@@ -65,7 +65,7 @@ subtest 'Hashes: direct empty hash does not wipe' => sub {
 };
 
 # =========================================================================
-# Array merge — concatenated, left-to-right in priority order
+# Array merge -- concatenated, left-to-right in priority order
 # =========================================================================
 
 subtest 'Arrays: concatenated from all levels' => sub {
@@ -78,7 +78,7 @@ subtest 'Arrays: concatenated from all levels' => sub {
     is_deeply($result->{tags}, ['c', 'b', 'a'], 'arrays concatenated in priority order');
 };
 
-subtest 'Arrays: partial config — only defaults and direct' => sub {
+subtest 'Arrays: partial config -- only defaults and direct' => sub {
     my $result = merge(
         { roles => ['admin'] },
         {},

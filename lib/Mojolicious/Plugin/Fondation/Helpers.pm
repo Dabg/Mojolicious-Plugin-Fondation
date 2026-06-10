@@ -1,5 +1,5 @@
 package Mojolicious::Plugin::Fondation::Helpers;
-# ABSTRACT: All Fondation helpers in one place — keeps Fondation.pm minimal
+# ABSTRACT: All Fondation helpers in one place -- keeps Fondation.pm minimal
 
 use Mojo::Base -base, -signatures;
 use Mojo::ByteStream 'b';
@@ -15,14 +15,14 @@ sub register ($class, $app, $manager) {
     $app->helper(fondation => sub { $manager->api });
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ── Fallback helpers — overridden by specialized plugins ──
+    # ── Fallback helpers -- overridden by specialized plugins ──
     # Must be registered BEFORE load_plugin_recursive so plugins can override.
     # ═══════════════════════════════════════════════════════════════════════
 
     # Overridden by I18N-like plugins
     $app->helper(l => sub { $_[1] });
 
-    # Fallback i18n_js — injected by layout before app JS.
+    # Fallback i18n_js -- injected by layout before app JS.
     # Identity function when I18N absent; overridden by I18N-like plugins.
     $app->helper(i18n_js => sub ($c) {
         return Mojo::ByteStream->new(
@@ -33,7 +33,7 @@ sub register ($class, $app, $manager) {
     # Overridden by a Notification plugin
     $app->helper(notify_user => sub { Mojo::Promise->resolve() });
 
-    # Overridden by a Authorization plugin — permissive fallback (allow all)
+    # Overridden by a Authorization plugin -- permissive fallback (allow all)
     $app->helper(check_group => sub { 1 });
     $app->helper(check_perm  => sub { 1 });
 

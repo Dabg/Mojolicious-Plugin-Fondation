@@ -31,7 +31,7 @@ has action_classes => sub ($self) {
 };
 
 # ---------------------------------------------------------------------------
-# load_all — instantiate plugins from a pre-sorted list (from Resolver)
+# load_all -- instantiate plugins from a pre-sorted list (from Resolver)
 # ---------------------------------------------------------------------------
 sub load_all ($self, $sorted_specs) {
     $self->{log} //= $self->app->log->context('[Fondation]');

@@ -16,7 +16,7 @@ use Mojolicious::Plugin::Fondation::TestHelper qw(create_test_app);
 use_ok 'Mojolicious::Plugin::Fondation';
 
 # ═══════════════════════════════════════════════════════════════════════════
-# provides_actions — action discovery
+# provides_actions -- action discovery
 # ═══════════════════════════════════════════════════════════════════════════
 
 subtest 'Action discovered via provides_actions in fondation_meta' => sub {

@@ -1,6 +1,6 @@
 package Mojolicious::Plugin::Fondation::CycleA;
 
-# ABSTRACT: Test plugin for cycle detection — depends on CycleB
+# ABSTRACT: Test plugin for cycle detection -- depends on CycleB
 
 use Mojo::Base 'Mojolicious::Plugin', -signatures;
 

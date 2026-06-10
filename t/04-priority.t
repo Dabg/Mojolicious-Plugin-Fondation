@@ -216,7 +216,7 @@ CONFIG
     }
 }
 
-# Test 5: Partial merge — direct and global have different keys
+# Test 5: Partial merge -- direct and global have different keys
 # When direct config has key_a and global has key_a + key_b,
 # the result should contain both key_a (from direct) and key_b (from global).
 {
@@ -280,7 +280,7 @@ CONFIG
     my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
 
-    # Direct config is empty hashref — should NOT overwrite defaults
+    # Direct config is empty hashref -- should NOT overwrite defaults
     $t->app->plugin('Fondation' => {
         dependencies => [
             { 'Mojolicious::Plugin::Fondation::User' => {} }
@@ -318,7 +318,7 @@ CONFIG
     my $app = create_test_app($tempdir);
     my $t = Test::Mojo->new($app);
     $t->app->plugin('Config' => {file => $conf_file});
-    $t->app->plugin('Fondation');  # no direct config — relies on global
+    $t->app->plugin('Fondation');  # no direct config -- relies on global
 
     my $fondation = $t->app->manager;
     my $registry  = $fondation->registry;

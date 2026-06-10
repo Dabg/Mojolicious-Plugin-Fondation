@@ -56,14 +56,14 @@ sub find_share_dir ($class_name, $override = undef) {
 }
 
 # 3-level merging with priority (uses Hash::Merge for recursive merge):
-# 1. direct config (in dependencies list)     — highest priority
+# 1. direct config (in dependencies list)     -- highest priority
 # 2. config in the app file (myapp.conf)
-# 3. plugin defaults (via fondation_meta)     — lowest priority
+# 3. plugin defaults (via fondation_meta)     -- lowest priority
 #
 # Hash::Merge::merge() is LEFT_PRECEDENT, so we reverse the call order:
 #   merge(direct, merge(app_conf, defaults))
-#   → direct wins over app_conf wins over defaults for scalars
-#   → arrays are concatenated, hashes are merged recursively
+#   -> direct wins over app_conf wins over defaults for scalars
+#   -> arrays are concatenated, hashes are merged recursively
 sub merge ($direct = {}, $app_conf = {}, $plugin_defaults = {}) {
     return Hash::Merge::merge(
         $direct // {},

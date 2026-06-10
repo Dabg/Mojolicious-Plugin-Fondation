@@ -45,7 +45,7 @@ subtest 'Command instantiation' => sub {
 # 2. _collect_steps gathers fondation_init from plugins
 # ═══════════════════════════════════════════════════════════════════════════
 
-subtest '_collect_steps — fondation_init' => sub {
+subtest '_collect_steps -- fondation_init' => sub {
     my $app   = build_app;
     my $cmd   = Mojolicious::Plugin::Fondation::Command::fondation->new(app => $app);
     my @steps = $cmd->_collect_steps($app, 'fondation_init');
@@ -63,7 +63,7 @@ subtest '_collect_steps — fondation_init' => sub {
 # 3. _collect_steps gathers fondation_upgrade from plugins
 # ═══════════════════════════════════════════════════════════════════════════
 
-subtest '_collect_steps — fondation_upgrade' => sub {
+subtest '_collect_steps -- fondation_upgrade' => sub {
     my $app   = build_app;
     my $cmd   = Mojolicious::Plugin::Fondation::Command::fondation->new(app => $app);
     my @steps = $cmd->_collect_steps($app, 'fondation_upgrade');

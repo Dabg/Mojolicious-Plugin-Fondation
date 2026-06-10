@@ -167,7 +167,7 @@ subtest 'Static priority: dependency plugin over parent plugin' => sub {
     cmp_ok($role_idx, '<', $auth_idx,
            'Role (dependency) static path appears before Authorization (parent)');
 
-    # Request common.css — should get Role's version (dependency wins)
+    # Request common.css -- should get Role's version (dependency wins)
     my $t = Test::Mojo->new($app);
     $t->get_ok('/common.css')
       ->status_is(200)

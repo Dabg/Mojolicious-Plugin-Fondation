@@ -21,7 +21,7 @@ sub register ($self, $app, $config = {}) {
         config => $merged_config,
     );
 
-    # API shares the Manager's registry — no circular ref
+    # API shares the Manager's registry -- no circular ref
     $manager->{api} = Mojolicious::Plugin::Fondation::API->new(
         registry => $manager->registry,
     );
@@ -154,7 +154,7 @@ Key features:
 =head1 LOADING ORDER
 
     1. load_plugin_recursive
-       └─ Fondation → dependencies recursively
+       └─ Fondation -> dependencies recursively
 
     2. run_post_load_actions
        └─ For every plugin (load order), execute all actions
@@ -177,7 +177,7 @@ Key features:
     };
 
     # Fondation loads Authorization, which depends on Role + Permission.
-    # Result: Role → Permission → Authorization → User
+    # Result: Role -> Permission -> Authorization -> User
     # All share/templates and controllers are auto-discovered.
 
 =head2 With a config file
@@ -234,9 +234,9 @@ Fondation automatically handles shared resources from plugins:
 
 =over 4
 
-=item * C<share/templates> → pushed to C<$app->renderer->paths>
+=item * C<share/templates> -> pushed to C<$app->renderer->paths>
 
-=item * C<share/public> → pushed to C<$app->static->paths>
+=item * C<share/public> -> pushed to C<$app->static->paths>
 
 =back
 
@@ -257,15 +257,15 @@ the C<actions> key in Fondation's configuration.
 
 =item * Custom actions: you can write your own action class by subclassing
 C<Mojolicious::Plugin::Fondation::Action::Base> or declare them via
-C<fondation_meta → provides_actions>.
+C<fondation_meta -> provides_actions>.
 
 =back
 
 =head2 Configuration
 
 Set the C<actions> key in the Fondation configuration. You rarely need
-this — the defaults C<['Templates', 'Controllers']> are used, plus any
-plugin-provided actions from C<fondation_meta → provides_actions>.
+this -- the defaults C<['Templates', 'Controllers']> are used, plus any
+plugin-provided actions from C<fondation_meta -> provides_actions>.
 
     plugin 'Fondation' => {
         actions      => ['Templates'],       # keep Templates, drop Controllers
@@ -279,11 +279,11 @@ combined with L<Hash::Merge>. The cascade priority is:
 
 =over 4
 
-=item 1. Direct config — passed inline in the C<dependencies> list (highest priority)
+=item 1. Direct config -- passed inline in the C<dependencies> list (highest priority)
 
-=item 2. App config — from C<myapp.conf> or C<$app-E<gt>config> via L<Mojolicious::Plugin::Config>
+=item 2. App config -- from C<myapp.conf> or C<$app-E<gt>config> via L<Mojolicious::Plugin::Config>
 
-=item 3. Plugin defaults — from C<fondation_meta → defaults> (lowest priority)
+=item 3. Plugin defaults -- from C<fondation_meta -> defaults> (lowest priority)
 
 =back
 
@@ -291,12 +291,12 @@ The merge rules are:
 
 =over 4
 
-=item * Scalars — overwrite. The highest-priority non-empty value wins.
+=item * Scalars -- overwrite. The highest-priority non-empty value wins.
 
-=item * Hashes — merged recursively. Keys present at multiple levels are resolved
+=item * Hashes -- merged recursively. Keys present at multiple levels are resolved
 by priority; keys present at only one level survive untouched.
 
-=item * Arrays — concatenated. All values from all levels are kept, ordered
+=item * Arrays -- concatenated. All values from all levels are kept, ordered
 by priority: direct elements first, then app config, then defaults.
 
 =back
@@ -304,10 +304,10 @@ by priority: direct elements first, then app config, then defaults.
 Example: a plugin declares C<allowed_roles =E<gt> ['user']> in its defaults,
 the app config adds C<allowed_roles =E<gt> ['editor']>, and a direct dependency
 passes C<allowed_roles =E<gt> ['admin']>. The merged result is
-C<['admin', 'editor', 'user']> — all three roles are available, with the
+C<['admin', 'editor', 'user']> -- all three roles are available, with the
 highest-priority one first.
 
-The C<dependencies> key is not special — it follows the same array
+The C<dependencies> key is not special -- it follows the same array
 concatenation rules. This means an app config can add extra dependencies
 without repeating those already declared.
 
@@ -382,11 +382,11 @@ All Fondation-aware plugins should define a class method C<fondation_meta>:
 
 =over 4
 
-=item * C<dependencies> → array of plugin names to load first
+=item * C<dependencies> -> array of plugin names to load first
 
-=item * C<provides_actions> → optional array of custom action short names
+=item * C<provides_actions> -> optional array of custom action short names
 
-=item * C<defaults> → fallback configuration values
+=item * C<defaults> -> fallback configuration values
 
 =back
 
@@ -469,21 +469,21 @@ Fondation registers the following helpers:
 
 =over 4
 
-=item * C<manager> — returns the L<Mojolicious::Plugin::Fondation::Manager> instance
+=item * C<manager> -- returns the L<Mojolicious::Plugin::Fondation::Manager> instance
 
-=item * C<has_helper($name)> — checks whether a helper is registered
+=item * C<has_helper($name)> -- checks whether a helper is registered
 
-=item * C<l($key)> — fallback identity function (overridden by I18N plugins)
+=item * C<l($key)> -- fallback identity function (overridden by I18N plugins)
 
-=item * C<check_group> / C<check_perm> — permissive fallbacks (allow all)
+=item * C<check_group> / C<check_perm> -- permissive fallbacks (allow all)
 
-=item * C<notify_user> — no-op that returns a resolved Promise
+=item * C<notify_user> -- no-op that returns a resolved Promise
 
-=item * C<valid_input> — returns the controller unchanged
+=item * C<valid_input> -- returns the controller unchanged
 
-=item * C<render_zone($zone)> — renders HTML zones from all plugins
+=item * C<render_zone($zone)> -- renders HTML zones from all plugins
 
-=item * C<render_zone_js($zone)> — includes JS zones from all plugins
+=item * C<render_zone_js($zone)> -- includes JS zones from all plugins
 
 =back
 
@@ -496,9 +496,9 @@ templates under C<share/templates/zones/>.
 =head2 Directory structure
 
     share/templates/zones/
-      html/header/          → picked up by render_zone('header')
+      html/header/          -> picked up by render_zone('header')
         greeting.html.ep
-      js/footer/            → picked up by render_zone_js('footer')
+      js/footer/            -> picked up by render_zone_js('footer')
         init.js.ep
 
 =head2 How it works

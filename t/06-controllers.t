@@ -163,7 +163,7 @@ subtest 'Plugin with unique controller (no name conflict) + metadata' => sub {
 subtest 'App controller has priority over plugin controller' => sub {
     my $tempdir = tempdir(CLEANUP => 1);
 
-    # Real app — MyApp::Controller is automatically in routes->namespaces
+    # Real app -- MyApp::Controller is automatically in routes->namespaces
     # because Mojolicious adds the app's namespace by default
     my $app = MyApp->new;
     $app->home(Mojo::Home->new($tempdir));
@@ -229,7 +229,7 @@ subtest 'Controllers action is active by default' => sub {
     my $tempdir = tempdir(CLEANUP => 1);
     my $app = create_test_app($tempdir);
 
-    # Load Fondation WITHOUT explicit 'actions' — Controllers should be active
+    # Load Fondation WITHOUT explicit 'actions' -- Controllers should be active
     $app->plugin('Fondation' => {
         dependencies => [['Fondation::TestController', {}]]
     });

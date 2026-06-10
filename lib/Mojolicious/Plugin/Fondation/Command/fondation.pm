@@ -1,6 +1,6 @@
 package Mojolicious::Plugin::Fondation::Command::fondation;
 
-# ABSTRACT: Fondation orchestration commands — init, upgrade, refresh
+# ABSTRACT: Fondation orchestration commands -- init, upgrade, refresh
 
 use Mojo::Base 'Mojolicious::Command', -signatures;
 
@@ -178,7 +178,7 @@ C<fondation_meta>.
 
 =head2 Plugin contract
 
-Plugins declare their participation via C<fondation_meta → defaults>:
+Plugins declare their participation via C<fondation_meta -> defaults>:
 
   sub fondation_meta {
       return {
@@ -190,18 +190,18 @@ Plugins declare their participation via C<fondation_meta → defaults>:
       };
   }
 
-All three keys are optional — a plugin only declares what it needs.
+All three keys are optional -- a plugin only declares what it needs.
 Because they live in C<defaults>, they participate in the config merge
 cascade (direct > app config > defaults). Users can override or extend
 them just like any other Fondation config value.
 
 =over
 
-=item * C<fondation_init> — array of command steps, each C<[command, args...]>
+=item * C<fondation_init> -- array of command steps, each C<[command, args...]>
 
-=item * C<fondation_upgrade> — array of command steps for incremental upgrade
+=item * C<fondation_upgrade> -- array of command steps for incremental upgrade
 
-=item * C<fondation_clean> — array of paths (relative to app home) to remove
+=item * C<fondation_clean> -- array of paths (relative to app home) to remove
 
 =back
 
