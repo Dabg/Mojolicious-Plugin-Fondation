@@ -1,6 +1,6 @@
 # NAME
 
-Mojolicious::Plugin::Fondation - Hierarchical plugin loader with configuration priority
+Mojolicious::Plugin::Fondation - Hierarchical plugin loader with configuration priority and resource sharing
 
 # VERSION
 
@@ -70,7 +70,7 @@ Mojolicious::Plugin::Fondation - Hierarchical plugin loader with configuration p
 # LOADING ORDER
 
     1. load_plugin_recursive
-       └─ Fondation → dependencies recursively
+       └─ Fondation -> dependencies recursively
 
     2. run_post_load_actions
        └─ For every plugin (load order), execute all actions
@@ -93,7 +93,7 @@ Mojolicious::Plugin::Fondation - Hierarchical plugin loader with configuration p
     };
 
     # Fondation loads Authorization, which depends on Role + Permission.
-    # Result: Role → Permission → Authorization → User
+    # Result: Role -> Permission -> Authorization -> User
     # All share/templates and controllers are auto-discovered.
 
 ## With a config file
@@ -144,8 +144,8 @@ Configuration for each plugin is merged in this order (highest priority first):
 
 Fondation automatically handles shared resources from plugins:
 
-- `share/templates` → pushed to `$app-`renderer->paths>
-- `share/public` → pushed to `$app-`static->paths>
+- `share/templates` -> pushed to `$app-`renderer->paths>
+- `share/public` -> pushed to `$app-`static->paths>
 
 The application's own `share/templates` directory (if it exists) is added
 with `unshift` and therefore has \*\*highest priority\*\* (application templates
@@ -161,13 +161,13 @@ the `actions` key in Fondation's configuration.
 - Default actions: `Templates`, `Controllers`, `Static`
 - Custom actions: you can write your own action class by subclassing
 `Mojolicious::Plugin::Fondation::Action::Base` or declare them via
-`fondation_meta → provides_actions`.
+`fondation_meta -` provides\_actions>.
 
 ## Configuration
 
 Set the `actions` key in the Fondation configuration. You rarely need
-this — the defaults `['Templates', 'Controllers']` are used, plus any
-plugin-provided actions from `fondation_meta → provides_actions`.
+this -- the defaults `['Templates', 'Controllers']` are used, plus any
+plugin-provided actions from `fondation_meta -` provides\_actions>.
 
     plugin 'Fondation' => {
         actions      => ['Templates'],       # keep Templates, drop Controllers
@@ -179,25 +179,25 @@ plugin-provided actions from `fondation_meta → provides_actions`.
 Each plugin receives a merged configuration built from three sources,
 combined with [Hash::Merge](https://metacpan.org/pod/Hash%3A%3AMerge). The cascade priority is:
 
-- 1. Direct config — passed inline in the `dependencies` list (highest priority)
-- 2. App config — from `myapp.conf` or `$app->config` via [Mojolicious::Plugin::Config](https://metacpan.org/pod/Mojolicious%3A%3APlugin%3A%3AConfig)
-- 3. Plugin defaults — from `fondation_meta → defaults` (lowest priority)
+- 1. Direct config -- passed inline in the `dependencies` list (highest priority)
+- 2. App config -- from `myapp.conf` or `$app->config` via [Mojolicious::Plugin::Config](https://metacpan.org/pod/Mojolicious%3A%3APlugin%3A%3AConfig)
+- 3. Plugin defaults -- from `fondation_meta -` defaults> (lowest priority)
 
 The merge rules are:
 
-- Scalars — overwrite. The highest-priority non-empty value wins.
-- Hashes — merged recursively. Keys present at multiple levels are resolved
+- Scalars -- overwrite. The highest-priority non-empty value wins.
+- Hashes -- merged recursively. Keys present at multiple levels are resolved
 by priority; keys present at only one level survive untouched.
-- Arrays — concatenated. All values from all levels are kept, ordered
+- Arrays -- concatenated. All values from all levels are kept, ordered
 by priority: direct elements first, then app config, then defaults.
 
 Example: a plugin declares `allowed_roles => ['user']` in its defaults,
 the app config adds `allowed_roles => ['editor']`, and a direct dependency
 passes `allowed_roles => ['admin']`. The merged result is
-`['admin', 'editor', 'user']` — all three roles are available, with the
+`['admin', 'editor', 'user']` -- all three roles are available, with the
 highest-priority one first.
 
-The `dependencies` key is not special — it follows the same array
+The `dependencies` key is not special -- it follows the same array
 concatenation rules. This means an app config can add extra dependencies
 without repeating those already declared.
 
@@ -264,9 +264,9 @@ All Fondation-aware plugins should define a class method `fondation_meta`:
         };
     }
 
-- `dependencies` → array of plugin names to load first
-- `provides_actions` → optional array of custom action short names
-- `defaults` → fallback configuration values
+- `dependencies` -> array of plugin names to load first
+- `provides_actions` -> optional array of custom action short names
+- `defaults` -> fallback configuration values
 
 This method is called before `register` to collect metadata without
 instantiating the plugin.
@@ -339,14 +339,13 @@ If you don't return $self:
 
 Fondation registers the following helpers:
 
-- `manager` — returns the [Mojolicious::Plugin::Fondation::Manager](https://metacpan.org/pod/Mojolicious%3A%3APlugin%3A%3AFondation%3A%3AManager) instance
-- `has_helper($name)` — checks whether a helper is registered
-- `l($key)` — fallback identity function (overridden by I18N plugins)
-- `check_group` / `check_perm` — permissive fallbacks (allow all)
-- `notify_user` — no-op that returns a resolved Promise
-- `valid_input` — returns the controller unchanged
-- `render_zone($zone)` — renders HTML zones from all plugins
-- `render_zone_js($zone)` — includes JS zones from all plugins
+- `manager` -- returns the [Mojolicious::Plugin::Fondation::Manager](https://metacpan.org/pod/Mojolicious%3A%3APlugin%3A%3AFondation%3A%3AManager) instance
+- `has_helper($name)` -- checks whether a helper is registered
+- `l($key)` -- fallback identity function (overridden by I18N plugins)
+- `check_group` / `check_perm` -- permissive fallbacks (allow all)
+- `notify_user` -- no-op that returns a resolved Promise
+- `render_zone($zone)` -- renders HTML zones from all plugins
+- `render_zone_js($zone)` -- includes JS zones from all plugins
 
 # ZONES
 
@@ -357,9 +356,9 @@ templates under `share/templates/zones/`.
 ## Directory structure
 
     share/templates/zones/
-      html/header/          → picked up by render_zone('header')
+      html/header/          -> picked up by render_zone('header')
         greeting.html.ep
-      js/footer/            → picked up by render_zone_js('footer')
+      js/footer/            -> picked up by render_zone_js('footer')
         init.js.ep
 
 ## How it works
