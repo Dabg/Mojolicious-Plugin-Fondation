@@ -16,6 +16,9 @@ has usage       => sub ($self) {
 Usage: APPLICATION fondation COMMAND [OPTIONS]
 
   myapp.pl db bootstrap-schema    Create the schema class (run once)
+  myapp.pl fondation plan init    Preview init steps (dry-run)
+  myapp.pl fondation plan upgrade Preview upgrade steps (dry-run)
+  myapp.pl fondation plan refresh Preview refresh steps (dry-run)
   myapp.pl fondation init         First-time setup for all plugins
   myapp.pl fondation upgrade      Detect drift, upgrade, regenerate
   myapp.pl fondation refresh      Clean all generated artifacts and regenerate
@@ -34,6 +37,7 @@ sub run ($self, @args) {
     die $self->usage unless $subcommand;
 
     for ($subcommand) {
+        /^plan$/    and return $self->_run_plan($app, shift @args || '');
         /^init$/    and return $self->_run_init($app);
         /^upgrade$/ and return $self->_run_upgrade($app);
         /^refresh$/ and return $self->_run_refresh($app);
@@ -85,8 +89,78 @@ sub _collect_clean ($self, $app) {
 }
 
 # ---------------------------------------------------------------------------
-# fondation init
+# fondation plan (dry-run preview)
 # ---------------------------------------------------------------------------
+
+sub _run_plan ($self, $app, $subcommand) {
+    die $self->usage unless $subcommand;
+
+    for ($subcommand) {
+        /^init$/    and return $self->_show_plan_init($app);
+        /^upgrade$/ and return $self->_show_plan_upgrade($app);
+        /^refresh$/ and return $self->_show_plan_refresh($app);
+        die $self->usage;
+    }
+}
+
+sub _short_name ($self, $app, $long) {
+    return $app->manager->registry->{$long}{short_name} // $long;
+}
+
+sub _show_plan_init ($self, $app) {
+    my @plugins = $self->_collect_steps($app, 'fondation_init');
+    my $total_steps = 0;
+
+    for my $p (@plugins) {
+        my $short = $self->_short_name($app, $p->{long_name});
+        say "-- $short";
+        for my $step (@{ $p->{steps} }) {
+            my @cmd = ref $step eq 'ARRAY' ? @$step : ($step);
+            say "   [run] @cmd";
+            $total_steps++;
+        }
+    }
+
+    say "-- Init plan: " . scalar(@plugins) . " plugins, $total_steps steps --";
+}
+
+sub _show_plan_upgrade ($self, $app) {
+    my @plugins = $self->_collect_steps($app, 'fondation_upgrade');
+    my $total_steps = 0;
+
+    for my $p (@plugins) {
+        my $short = $self->_short_name($app, $p->{long_name});
+        say "-- $short";
+        for my $step (@{ $p->{steps} }) {
+            my @cmd = ref $step eq 'ARRAY' ? @$step : ($step);
+            say "   [run] @cmd";
+            $total_steps++;
+        }
+    }
+
+    say "-- Upgrade plan: " . scalar(@plugins) . " plugins, $total_steps steps --";
+}
+
+sub _show_plan_refresh ($self, $app) {
+    # Phase 1: clean
+    my @clean = $self->_collect_clean($app);
+
+    if (@clean) {
+        say "-- Clean phase --";
+        for my $p (@clean) {
+            my $short = $self->_short_name($app, $p->{long_name});
+            for my $target (@{ $p->{targets} }) {
+                say "   [$short] remove $target";
+            }
+        }
+        say "";
+    }
+
+    # Phase 2: init
+    $self->_show_plan_init($app);
+
+    say "-- Refresh plan --";
+}
 
 sub _run_init ($self, $app) {
     my @plugins = $self->_collect_steps($app, 'fondation_init');
@@ -172,8 +246,8 @@ Mojolicious::Plugin::Fondation::Command::fondation - Orchestrate Fondation plugi
 
 =head1 DESCRIPTION
 
-Provides C<init>, C<upgrade> and C<refresh> commands that iterate over all
-loaded Fondation plugins and execute the steps each plugin declares in its
+Provides C<init>, C<upgrade>, C<refresh>, and C<plan> commands that iterate
+over all loaded Fondation plugins and execute the steps each plugin declares in its
 C<fondation_meta>.
 
 =head2 Plugin contract
@@ -206,6 +280,18 @@ them just like any other Fondation config value.
 =back
 
 =head2 Commands
+
+=head3 fondation plan
+
+Dry-run preview that shows what C<init>, C<upgrade>, or C<refresh> would
+execute without actually running any steps.
+
+  $ myapp.pl fondation plan init
+  $ myapp.pl fondation plan upgrade
+  $ myapp.pl fondation plan refresh
+
+Output shows each plugin (by short name) and its steps or clean targets,
+in load order. A summary line at the end gives plugin and step counts.
 
 =head3 fondation init
 
