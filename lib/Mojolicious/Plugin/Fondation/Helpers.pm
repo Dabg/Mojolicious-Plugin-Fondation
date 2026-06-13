@@ -37,8 +37,25 @@ sub register ($class, $app, $manager) {
     $app->helper(check_group => sub { 1 });
     $app->helper(check_perm  => sub { 1 });
 
-    # Overridden by a validation plugin
-    $app->helper(valid_input => sub ($c) { $c });
+    # ═══════════════════════════════════════════════════════════════════════
+    # ── Route conditions ──
+    # ── check_perm/check_group are no-ops above until Authorization plugin
+    # ── overrides them. fondation.authenticated is provided by Auth plugin.
+    # ═══════════════════════════════════════════════════════════════════════
+
+    $app->routes->add_condition('fondation.perm' => sub {
+        my ($route, $c, $captures, $perm) = @_;
+        return 1 if $c->check_perm($perm);
+        $c->render(text => 'Forbidden', status => 403);
+        return undef;
+    });
+
+    $app->routes->add_condition('fondation.group' => sub {
+        my ($route, $c, $captures, $group) = @_;
+        return 1 if $c->check_group($group);
+        $c->render(text => 'Forbidden', status => 403);
+        return undef;
+    });
 
 
     # ═══════════════════════════════════════════════════════════════════════

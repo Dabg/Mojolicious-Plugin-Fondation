@@ -479,8 +479,6 @@ Fondation registers the following helpers:
 
 =item * C<notify_user> -- no-op that returns a resolved Promise
 
-=item * C<valid_input> -- returns the controller unchanged
-
 =item * C<render_zone($zone)> -- renders HTML zones from all plugins
 
 =item * C<render_zone_js($zone)> -- includes JS zones from all plugins
