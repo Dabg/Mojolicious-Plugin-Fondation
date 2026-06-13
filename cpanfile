@@ -5,7 +5,7 @@ requires 'perl' => '5.026';
 
 # Runtime dependencies
 requires 'Hash::Merge' => '0.300';
-requires 'Mojolicious' => '9.00';
+requires 'Mojolicious' => '9.46';
 
 # Testing dependencies
 on test => sub {
