@@ -5,6 +5,7 @@ use warnings;
 use Test::More;
 use File::Temp 'tempdir';
 use FindBin;
+use Mojo::File 'path';
 
 use lib "$FindBin::Bin/../lib";
 use lib "$FindBin::Bin/lib";
@@ -144,9 +145,9 @@ subtest '_run_refresh cleans then inits' => sub {
 
     # Create files/dirs that fondation_clean should remove
     my $home = $app->home;
-    $home->child('test_clean_dir')->make_path;
-    $home->child('test_clean_dir', 'subfile.txt')->spew('data');
-    $home->child('test_clean_file.txt')->spew('data');
+    path($home->child('test_clean_dir'))->make_path;
+    path($home->child('test_clean_dir', 'subfile.txt'))->spurt('data');
+    path($home->child('test_clean_file.txt'))->spurt('data');
 
     ok(-d $home->child('test_clean_dir'), 'test_clean_dir exists before refresh');
     ok(-f $home->child('test_clean_file.txt'), 'test_clean_file.txt exists before refresh');
