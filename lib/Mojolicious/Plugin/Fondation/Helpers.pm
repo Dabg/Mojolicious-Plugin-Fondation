@@ -40,7 +40,7 @@ sub register ($class, $app, $manager) {
     # ═══════════════════════════════════════════════════════════════════════
     # ── Route conditions ──
     # ── check_perm/check_group are no-ops above until Authorization plugin
-    # ── overrides them. fondation.authenticated is provided by Auth plugin.
+    # ── overrides them.
     # ═══════════════════════════════════════════════════════════════════════
 
     $app->routes->add_condition('fondation.perm' => sub {

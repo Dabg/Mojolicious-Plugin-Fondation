@@ -366,55 +366,6 @@ resolves it automatically.
 If the action name does not start with C<Mojolicious::>, Fondation will
 prepend C<Mojolicious::Plugin::Fondation::Action::> to it as a fallback.
 
-=head1 THE fondation_meta METHOD
-
-All Fondation-aware plugins should define a class method C<fondation_meta>:
-
-    sub fondation_meta {
-        return {
-            dependencies     => ['XXX', 'YYY'],   # loaded before this plugin
-            provides_actions => ['MyAction'],       # optional custom action
-            defaults         => {
-                title => 'Default Title',
-            },
-        };
-    }
-
-=over 4
-
-=item * C<dependencies> -> array of plugin names to load first
-
-=item * C<provides_actions> -> optional array of custom action short names
-
-=item * C<defaults> -> fallback configuration values
-
-=back
-
-This method is called before C<register> to collect metadata without
-instantiating the plugin.
-
-=head1 THE return $self REQUIREMENT
-
-To fully participate in Fondation's features (especially C<fondation_finalyze>),
-a plugin **must return $self** from its C<register> method:
-
-  sub register ($self, $app, $conf) {
-      # Your code...
-      return $self;
-  }
-
-If you don't return $self:
-
-=over 4
-
-=item * Instance is not stored in the registry
-
-=item * C<fondation_finalyze> cannot be called
-
-=item * Plugin is still loaded and actions run, but finalyze features are skipped
-
-=back
-
 =head1 CREATING A FONDATION-AWARE PLUGIN
 
 1. **File structure**
@@ -447,6 +398,51 @@ If you don't return $self:
 
     1;
 
+=head2 The C<fondation_meta> contract
+
+All Fondation-aware plugins must define a class method C<fondation_meta>:
+
+    sub fondation_meta {
+        return {
+            dependencies     => ['XXX', 'YYY'],   # loaded before this plugin
+            provides_actions => ['MyAction'],       # optional custom action
+            defaults         => {
+                title => 'Default Title',
+            },
+        };
+    }
+
+=over 4
+
+=item * C<dependencies> — array of plugin names to load first
+
+=item * C<provides_actions> — optional array of custom action short names
+
+=item * C<defaults> — fallback configuration values (lowest priority)
+
+=back
+
+This method is called before C<register> to collect metadata without
+instantiating the plugin. It is the cornerstone of Fondation's composition
+model: every plugin declares what it needs and what it provides.
+
+=head2 Why C<return $self> is required
+
+To fully participate in Fondation's features (especially C<fondation_finalyze>),
+a plugin **must return $self** from its C<register> method.
+
+If you don't return $self:
+
+=over 4
+
+=item * Instance is not stored in the registry
+
+=item * C<fondation_finalyze> cannot be called
+
+=item * Plugin is still loaded and actions run, but finalyze features are skipped
+
+=back
+
 3. **Loading**
 
     In your Fondation config:
@@ -455,13 +451,6 @@ If you don't return $self:
             'MyPlugin',
             # or { 'MyPlugin' => { enable_feature => 0 } }
         ]
-
-4. **Testing**
-
-    - Check registry: C<< $app->manager->registry >>
-    - Check logs for contextual debug (C<< [$short] message >>)
-    - Verify templates are added
-    - Use C<< /fondation/debug/registry >> route (development mode) to inspect
 
 =head1 HELPERS
 
@@ -512,5 +501,10 @@ the raw content instead of rendering through the template engine.
 
     %= render_zone 'header'
     %= render_zone_js 'footer'
+
+=head1 ACKNOWLEDGMENTS
+
+Fondation and its plugin ecosystem were developed with significant
+assistance from an AI coding agent.
 
 =cut
