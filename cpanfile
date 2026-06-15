@@ -1,7 +1,7 @@
 # CPAN dependencies for Mojolicious-Plugin-Fondation
 
 # Minimum Perl version required (for Mojolicious signatures feature)
-requires 'perl' => '5.026';
+requires 'perl' => '5.020';
 
 # Runtime dependencies
 requires 'File::ShareDir' => '0';
