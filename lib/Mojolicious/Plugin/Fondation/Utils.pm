@@ -24,9 +24,11 @@ sub short_name {
 
 sub share_relative {
     my ($path) = @_;
-    my $pos = rindex($path, '/share/');
+    # Normalize to forward slashes (cross-platform: Windows uses backslashes)
+    (my $normalized = $path) =~ s{\\}{/}g;
+    my $pos = rindex($normalized, '/share/');
     return $path if $pos == -1;
-    return substr($path, $pos + 1);
+    return substr($normalized, $pos + 1);
 }
 
 sub find_share_dir ($class_name, $override = undef) {

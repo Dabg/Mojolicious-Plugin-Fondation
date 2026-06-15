@@ -67,7 +67,7 @@ sub _register_zones ($self, $long, $short, $templates_dir) {
         return unless $basename =~ /\.(html|js)\.ep$/i;
 
         my $type = lc $1;
-        my $rel  = $file->to_rel($templates_dir)->to_string;
+        my $rel  = Mojo::Path->new($file->to_rel($templates_dir)->to_string)->to_string;
         my ($zone) = $rel =~ m{^zones/$type/(.+)/[^/]+$};
 
         $entry->{zones}{$type} //= {};
