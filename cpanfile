@@ -4,6 +4,7 @@
 requires 'perl' => '5.026';
 
 # Runtime dependencies
+requires 'File::ShareDir' => '0';
 requires 'Hash::Merge' => '0.300';
 requires 'Mojolicious' => '9.46';
 
