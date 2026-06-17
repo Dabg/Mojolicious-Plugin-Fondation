@@ -111,7 +111,7 @@ sub _run_post_load_actions_for ($self, $long, $conf = {}) {
         };
 
         my ($action_short) = $action_class =~ /::Action::(.+)$/;
-        my $action_log = $self->app->log->context("[$action_short Action]");
+        my $action_log = $self->app->log->context("[$action_short >]");
 
         my $action = $action_class->new(
             manager => $self,
