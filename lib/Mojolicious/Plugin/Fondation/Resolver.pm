@@ -67,10 +67,6 @@ sub _visit ($self, $long, $direct_conf) {
             ($dep_name) = keys %$dep_spec;
             $dep_conf = $dep_spec->{$dep_name} // {};
         }
-        elsif (ref $dep_spec eq 'ARRAY') {
-            ($dep_name, $dep_conf) = @$dep_spec;
-            $dep_conf //= {};
-        }
         else {
             $dep_name    = $dep_spec;
             $dep_conf    = {};
