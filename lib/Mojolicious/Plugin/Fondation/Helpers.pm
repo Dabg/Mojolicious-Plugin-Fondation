@@ -57,6 +57,14 @@ sub register ($class, $app, $manager) {
         return undef;
     });
 
+    $app->routes->add_condition('fondation.authenticated' => sub {
+        my ($route, $c, $captures, $required) = @_;
+        # Default: nobody is authenticated (overridden by Fondation::Auth)
+        return 1 unless $required;
+        $c->render(text => 'Forbidden', status => 403);
+        return undef;
+    });
+
 
     # ═══════════════════════════════════════════════════════════════════════
     # ── Real helpers (not no-ops) ──
