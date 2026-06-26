@@ -42,7 +42,7 @@ sub register ($self, $app, $config = {}) {
     $manager->registry->{'Mojolicious::Plugin::Fondation'} = {
         instance       => $self,
         short_name     => $short,
-        share_dir      => find_share_dir('Mojolicious::Plugin::Fondation'),
+        share_dir      => find_share_dir('Mojolicious::Plugin::Fondation', $merged_config->{share_dir}),
         config         => $merged_config,
         loaded_at      => time,
         metadata       => { has_templates => 0, has_assets => 0 },
