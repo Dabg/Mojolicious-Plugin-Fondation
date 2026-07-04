@@ -5,6 +5,7 @@ package Mojolicious::Plugin::Fondation::API;
 use Mojo::Base -base, -signatures;
 
 has 'registry';
+has 'load_order';
 
 # ---------------------------------------------------------------------------
 # plugin($name) -- returns a specific plugin's merged config hashref
@@ -33,6 +34,24 @@ sub config ($self, $name) {
 sub _resolve_long ($self, $name) {
     require Mojolicious::Plugin::Fondation::Utils;
     return Mojolicious::Plugin::Fondation::Utils::long_name($name);
+}
+
+sub find_template_source ($self, $name = '') {
+    return undef unless $name && $self->registry && $self->load_order;
+
+    # Normalize to .html.ep format
+    my $normalized = $name;
+    $normalized .= '.html.ep' unless $normalized =~ /\.html\.ep$/i;
+
+    for my $long (@{$self->load_order}) {
+        my $entry = $self->registry->{$long} or next;
+        next unless $entry->{templates};
+
+        if (exists $entry->{templates}{$normalized}) {
+            return $entry->{short_name};
+        }
+    }
+    return undef;
 }
 
 1;

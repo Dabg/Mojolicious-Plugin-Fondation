@@ -21,9 +21,10 @@ sub register ($self, $app, $config = {}) {
         config => $merged_config,
     );
 
-    # API shares the Manager's registry -- no circular ref
+    # API shares the Manager's registry and load_order -- no circular ref
     $manager->{api} = Mojolicious::Plugin::Fondation::API->new(
-        registry => $manager->registry,
+        registry   => $manager->registry,
+        load_order => $manager->load_order,
     );
 
     # ── Register all helpers (fallbacks + real) BEFORE plugin discovery ──
