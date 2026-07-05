@@ -147,6 +147,24 @@ sub run_post_load_actions ($self) {
 sub run_finalyze ($self) {
     $self->log->debug("Running fondation_finalyze in loading order");
 
+    # If schema_class is configured but MySchema.pm doesn't exist yet,
+    # skip all finalyze — plugins with DBIC dependencies would crash.
+    # db bootstrap-schema (a CLI command) runs before finalyze and
+    # creates the file; the next restart will pass this check.
+    my $c = $self->app->build_controller;
+    if ($c->has_helper('schema_class')) {
+        my $sc = eval { $c->schema_class };
+        if ($sc) {
+            eval "require $sc; 1" or do {
+                $self->log->warn(
+                    "Schema '$sc' not found. "
+                  . "Run 'db bootstrap-schema' first. "
+                  . "Skipping all fondation_finalyze.");
+                return;
+            };
+        }
+    }
+
     for my $long (@{$self->load_order}) {
         my $entry  = $self->registry->{$long};
         my $plugin = $entry->{instance};
