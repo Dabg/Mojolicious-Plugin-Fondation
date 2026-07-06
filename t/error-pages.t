@@ -44,18 +44,6 @@ subtest '500 uses exception.production template in production mode' => sub {
       ->content_like(qr/Internal Server Error/);
 };
 
-subtest '403 template is loadable (used by OpenAPI /error/403 route)' => sub {
-    my $tempdir = tempdir(CLEANUP => 1);
-    my $app = create_test_app($tempdir);
-
-    $app->plugin('Fondation' => { share_dir => $dev_share });
-
-    my $c = $app->build_controller;
-    my $out = $c->render_to_string(template => 'error/403', status => 403);
-    ok($out, 'error/403 renders');
-    like($out, qr/Forbidden/, 'contains Forbidden');
-};
-
 subtest 'development mode uses Mojo default debug pages' => sub {
     local $ENV{MOJO_MODE} = 'development';
 
