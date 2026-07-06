@@ -1,6 +1,9 @@
 Revision history for Mojolicious-Plugin-Fondation
 
 {{$NEXT}}
+    - delete error template
+    - Skipping all fondation_finalyze if schema not found
+    - add find_template_source to API
     - Remove legacy arrayref dependency format ['Plugin', {config}]
     - Add no-op fallback for fondation.authenticated
 
