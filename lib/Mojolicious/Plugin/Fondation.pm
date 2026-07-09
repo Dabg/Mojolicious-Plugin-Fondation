@@ -436,6 +436,8 @@ All Fondation-aware plugins must define a class method C<fondation_meta>:
         return {
             dependencies     => ['XXX', 'YYY'],   # loaded before this plugin
             provides_actions => ['MyAction'],       # optional custom action
+            before           => ['ZZZ'],            # soft: load this plugin before ZZZ
+            after            => ['WWW'],            # soft: load this plugin after WWW
             defaults         => {
                 title => 'Default Title',
             },
@@ -447,6 +449,12 @@ All Fondation-aware plugins must define a class method C<fondation_meta>:
 =item * C<dependencies> -> array of plugin names to load first
 
 =item * C<provides_actions> -> optional array of custom action short names
+
+=item * C<before> -> soft ordering: this plugin loads B<before> the listed plugins.
+Silently ignored when the target is not in the graph.
+
+=item * C<after> -> soft ordering: this plugin loads B<after> the listed plugins.
+Silently ignored when the target is not in the graph.
 
 =item * C<defaults> -> fallback configuration values (lowest priority)
 
