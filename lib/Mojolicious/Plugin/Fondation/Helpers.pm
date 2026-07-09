@@ -43,19 +43,23 @@ sub register ($class, $app, $manager) {
     # ── overrides them.
     # ═══════════════════════════════════════════════════════════════════════
 
+    # ── Route conditions (only if not already set by a plugin) ──
+    # Auth/Authorization register their own versions during load_all;
+    # these fallbacks only apply when no plugin overrode them.
+
     $app->routes->add_condition('fondation.perm' => sub {
         my ($route, $c, $captures, $perm) = @_;
         return 1 if $c->check_perm($perm);
         $c->render(text => 'Forbidden', status => 403);
         return undef;
-    });
+    }) unless $app->routes->conditions->{'fondation.perm'};
 
     $app->routes->add_condition('fondation.group' => sub {
         my ($route, $c, $captures, $group) = @_;
         return 1 if $c->check_group($group);
         $c->render(text => 'Forbidden', status => 403);
         return undef;
-    });
+    }) unless $app->routes->conditions->{'fondation.group'};
 
     $app->routes->add_condition('fondation.authenticated' => sub {
         my ($route, $c, $captures, $required) = @_;
@@ -63,7 +67,7 @@ sub register ($class, $app, $manager) {
         return 1 unless $required;
         $c->render(text => 'Forbidden', status => 403);
         return undef;
-    });
+    }) unless $app->routes->conditions->{'fondation.authenticated'};
 
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -74,6 +78,7 @@ sub register ($class, $app, $manager) {
     $app->helper(has_helper => sub ($c, $name) {
         return exists $c->app->renderer->helpers->{$name};
     });
+
 
 
     # ═══════════════════════════════════════════════════════════════════════
