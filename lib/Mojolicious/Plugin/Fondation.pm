@@ -7,6 +7,7 @@ use Mojolicious::Plugin::Fondation::Resolver;
 use Mojolicious::Plugin::Fondation::Manager;
 use Mojolicious::Plugin::Fondation::API;
 use Mojolicious::Plugin::Fondation::Helpers;
+use Mojo::Util;
 use Mojolicious::Plugin::Fondation::Utils qw(merge short_name find_share_dir);
 
 sub register ($self, $app, $config = {}) {
@@ -27,12 +28,20 @@ sub register ($self, $app, $config = {}) {
         load_order => $manager->load_order,
     );
 
-    # ── Register all helpers (fallbacks + real) BEFORE plugin discovery ──
-    Mojolicious::Plugin::Fondation::Helpers->register($app, $manager);
-
     # ── Register command namespace ──
     push @{$app->commands->namespaces},
         'Mojolicious::Plugin::Fondation::Command';
+
+    # ── Install helper wrapper: first to register wins ──
+    # During plugin loading, $app->helper won't overwrite a helper already
+    # registered by a dependency (loaded earlier).  Fondation's own helpers
+    # are registered last, so they only take effect when no plugin provides
+    # an alternative — true fallbacks.
+    my $original_helper = $app->can('helper');
+    Mojo::Util::monkey_patch(ref($app), helper => sub ($self, $name, $sub) {
+        return if exists $self->renderer->helpers->{$name};
+        $original_helper->($self, $name, $sub);
+    });
 
     # ── Resolve the full dependency graph (with cycle detection) ──
     my $resolver = Mojolicious::Plugin::Fondation::Resolver->new(app => $app);
@@ -55,6 +64,20 @@ sub register ($self, $app, $config = {}) {
 
     # ── Instantiate all plugins in resolved order ──
     $manager->load_all($sorted);
+
+    # ── Move Fondation to end of load_order ──
+    # All other plugins' templates/controllers/static are now ahead of
+    # Fondation's, and their helpers have been registered (first wins).
+    # Fondation's helpers only take effect when no plugin provided them.
+    my @reordered = grep { $_ ne 'Mojolicious::Plugin::Fondation' } @{$manager->load_order};
+    push @reordered, 'Mojolicious::Plugin::Fondation';
+    $manager->{load_order} = \@reordered;
+
+    # ── Register Fondation helpers as true fallbacks ──
+    Mojolicious::Plugin::Fondation::Helpers->register($app, $manager);
+
+    # ── Restore original helper method ──
+    Mojo::Util::monkey_patch(ref($app), helper => $original_helper);
 
     # ── Post-load actions and finalyze ──
     $manager->run_post_load_actions();
