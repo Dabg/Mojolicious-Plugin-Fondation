@@ -142,6 +142,21 @@ sub run_post_load_actions ($self) {
         unshift @{$self->app->static->paths}, $app_public->to_string;
         $self->log->debug("App public priority: " . share_relative($app_public));
     }
+
+    # Add local controller namespace (Mojolicious::Lite clears it).
+    # Only when the app actually has local controllers.
+    my $moniker      = $self->app->moniker;
+    my $local_ns     = Mojo::Util::camelize($moniker);
+    my $ctrl_path    = $local_ns =~ s{::}{/}gr;
+    my $local_ctrl_dir = $self->app->home->child('lib', split('/', $ctrl_path), 'Controller');
+    if (-d $local_ctrl_dir) {
+        my $ns = $self->app->routes->namespaces;
+        my $ctrl_ns = "${local_ns}::Controller";
+        unless (grep { $_ eq $ctrl_ns } @$ns) {
+            unshift @$ns, $ctrl_ns;
+            $self->log->debug("App controller namespace: $ctrl_ns");
+        }
+    }
 }
 
 sub run_finalyze ($self) {
