@@ -16,7 +16,12 @@ sub index ($self) {
     # Only 'en' and 'fr' exist; fall back to 'en' for anything else
     $lang = 'en' unless $lang eq 'fr';
 
-    $c->render(template => "welcome_$lang");
+    my $has_setup = exists $c->app->fondation->registry->{'Mojolicious::Plugin::Fondation::Setup'};
+
+    $c->render(
+        template  => "welcome_$lang",
+        has_setup => $has_setup,
+    );
 }
 
 1;
