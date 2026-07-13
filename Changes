@@ -1,6 +1,8 @@
 Revision history for Mojolicious-Plugin-Fondation
 
 {{$NEXT}}
+
+0.05      2026-07-13 14:12:33+02:00 Europe/Paris
     - add fondation.js with no-op JS fallbacks
     - scan dev_plugins_dir to add local plugins
 
