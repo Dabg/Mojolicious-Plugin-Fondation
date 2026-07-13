@@ -8,8 +8,6 @@ use utf8;
 use Mojo::File 'path';
 use File::Path qw(remove_tree);
 
-our $VERSION = '0.01';
-
 has description => 'Orchestrate Fondation plugins: init, upgrade, clean, refresh';
 has usage       => sub ($self) {
     <<"USAGE";
