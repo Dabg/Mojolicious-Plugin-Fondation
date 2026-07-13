@@ -24,6 +24,11 @@ sub resolve ($self, $name_or_short, $direct_conf = {}) {
     $self->{states} = {};
     $self->{result} = [];
 
+    # ── Dev plugin discovery: scan dev_plugins_dir for Mojolicious-Plugin-Fondation-*/lib ──
+    if (my $dev_root = $direct_conf->{dev_plugins_dir}) {
+        $self->_add_dev_plugins_to_inc($dev_root);
+    }
+
     # Phase 1 — Discover all plugins via the original dependency graph
     my $graph = {};
     $self->_discover_graph($long, $direct_conf, $graph);
@@ -139,6 +144,20 @@ sub _parse_dep ($self, $dep_spec) {
         return ($name, $dep_spec->{$name} // {});
     }
     return ($dep_spec, {});
+}
+
+# ---------------------------------------------------------------------------
+# _add_dev_plugins_to_inc — scan dev_plugins_dir for plugin repos and add
+# their lib/ directories to @INC (before installed modules, so dev wins).
+# ---------------------------------------------------------------------------
+sub _add_dev_plugins_to_inc ($self, $dev_root) {
+    my @dirs = sort glob("$dev_root/Mojolicious-Plugin-Fondation-*");
+    for my $dir (@dirs) {
+        my $lib = "$dir/lib";
+        next unless -d $lib;
+        unshift @INC, $lib;
+        $self->app->log->debug("Dev plugin lib added to \@INC: $lib");
+    }
 }
 
 # ---------------------------------------------------------------------------
